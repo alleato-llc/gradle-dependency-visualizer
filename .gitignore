@@ -39,3 +39,9 @@ Package.resolved
 # Environment
 .env
 .env.*
+
+# Generated app icons (source of truth is scripts/generate_icon.py)
+GradleDependencyVisualizer/Assets.xcassets/AppIcon.appiconset/icon_*.png
+
+# Python venv for icon generation
+scripts/.venv/

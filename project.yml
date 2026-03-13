@@ -27,6 +27,19 @@ targets:
     dependencies:
       - package: GradleDependencyVisualizerCore
       - package: GradleDependencyVisualizerServices
+    preBuildScripts:
+      - name: Generate App Icon
+        script: |
+          VENV_DIR="${PROJECT_DIR}/scripts/.venv"
+          VENV_PYTHON="${VENV_DIR}/bin/python3"
+          if [ -x "$VENV_PYTHON" ]; then
+            "$VENV_PYTHON" "${PROJECT_DIR}/scripts/generate_icon.py"
+          elif command -v python3 &>/dev/null; then
+            python3 "${PROJECT_DIR}/scripts/generate_icon.py"
+          else
+            echo "warning: python3 not found, skipping icon generation"
+          fi
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.alleato.gradledependencyvisualizer
@@ -35,6 +48,8 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: "Gradle Visualizer"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleIconName: AppIcon
     entitlements:
       path: GradleDependencyVisualizer/GradleDependencyVisualizer.entitlements
       properties:

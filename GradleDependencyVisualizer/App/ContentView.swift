@@ -4,12 +4,16 @@ import GradleDependencyVisualizerCore
 import GradleDependencyVisualizerServices
 
 struct ContentView: View {
+    enum DetailViewMode: String { case graph, table }
+
     let container: DependencyContainer
     @State private var projectSelectionViewModel: ProjectSelectionViewModel
     @State private var graphViewModel: DependencyGraphViewModel?
     @State private var conflictViewModel: ConflictTableViewModel?
     @State private var diffViewModel: DependencyDiffViewModel?
+    @State private var tableViewModel: DependencyTableViewModel?
     @State private var showConflicts = false
+    @State private var detailMode: DetailViewMode = .graph
 
     init(container: DependencyContainer) {
         self.container = container
@@ -29,17 +33,33 @@ struct ContentView: View {
                     self.diffViewModel = nil
                 })
             } else if let graphViewModel {
-                VSplitView {
-                    DependencyGraphView(viewModel: graphViewModel, onCompare: compareAgainstBaseline)
-                        .frame(minHeight: 200)
+                Group {
+                    switch detailMode {
+                    case .graph:
+                        VSplitView {
+                            DependencyGraphView(viewModel: graphViewModel, onCompare: compareAgainstBaseline)
+                                .frame(minHeight: 200)
 
-                    if showConflicts, let conflictViewModel {
-                        ConflictTableView(viewModel: conflictViewModel)
-                            .frame(minHeight: 100, idealHeight: 200)
+                            if showConflicts, let conflictViewModel {
+                                ConflictTableView(viewModel: conflictViewModel)
+                                    .frame(minHeight: 100, idealHeight: 200)
+                            }
+                        }
+                    case .table:
+                        if let tableViewModel {
+                            DependencyTableView(viewModel: tableViewModel)
+                        }
                     }
                 }
                 .toolbar {
-                    if let conflictViewModel, !conflictViewModel.conflicts.isEmpty {
+                    ToolbarItem {
+                        Picker("View", selection: $detailMode) {
+                            Text("Graph").tag(DetailViewMode.graph)
+                            Text("Table").tag(DetailViewMode.table)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    if let conflictViewModel, !conflictViewModel.conflicts.isEmpty, detailMode == .graph {
                         ToolbarItem {
                             Button(showConflicts ? "Hide Conflicts" : "View Conflicts") {
                                 showConflicts.toggle()
@@ -70,11 +90,13 @@ struct ContentView: View {
             if let tree {
                 graphViewModel = DependencyGraphViewModel(tree: tree, fileExporter: container.fileExporter)
                 conflictViewModel = ConflictTableViewModel(tree: tree, fileExporter: container.fileExporter)
+                tableViewModel = DependencyTableViewModel(tree: tree, fileExporter: container.fileExporter)
                 showConflicts = false
                 diffViewModel = nil
             } else {
                 graphViewModel = nil
                 conflictViewModel = nil
+                tableViewModel = nil
                 diffViewModel = nil
             }
         }

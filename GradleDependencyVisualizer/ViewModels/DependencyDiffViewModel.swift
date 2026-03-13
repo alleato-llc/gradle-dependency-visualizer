@@ -9,7 +9,10 @@ final class DependencyDiffViewModel {
     private let logger = Logger(subsystem: "com.alleato.gradledependencyvisualizer", category: "DependencyDiff")
     private let fileExporter: any FileExporter
 
-    let diffResult: DependencyDiffResult
+    private var baseline: DependencyTree
+    private var current: DependencyTree
+    private(set) var diffResult: DependencyDiffResult
+    var isSwapped = false
 
     enum SortField: String {
         case status
@@ -62,8 +65,16 @@ final class DependencyDiffViewModel {
     }
 
     init(baseline: DependencyTree, current: DependencyTree, fileExporter: any FileExporter) {
+        self.baseline = baseline
+        self.current = current
         self.fileExporter = fileExporter
         self.diffResult = DependencyDiffCalculator.diff(baseline: baseline, current: current)
+    }
+
+    func swapDirection() {
+        swap(&baseline, &current)
+        isSwapped.toggle()
+        diffResult = DependencyDiffCalculator.diff(baseline: baseline, current: current)
     }
 
     func toggleSort(field: SortField) {

@@ -79,4 +79,35 @@ struct DependencyDiffViewModelTests {
         #expect(viewModel.sortField == .status)
         #expect(viewModel.sortAscending)
     }
+
+    @Test @MainActor
+    func swapReversesDirection() {
+        let viewModel = makeViewModel()
+        let addedBefore = viewModel.diffResult.added.count
+        let removedBefore = viewModel.diffResult.removed.count
+        #expect(viewModel.diffResult.baselineName == "baseline")
+        #expect(viewModel.diffResult.currentName == "current")
+
+        viewModel.swapDirection()
+
+        #expect(viewModel.diffResult.baselineName == "current")
+        #expect(viewModel.diffResult.currentName == "baseline")
+        #expect(viewModel.isSwapped)
+        // Added and removed counts should swap
+        #expect(viewModel.diffResult.added.count == removedBefore)
+        #expect(viewModel.diffResult.removed.count == addedBefore)
+    }
+
+    @Test @MainActor
+    func doubleSwapRestoresOriginal() {
+        let viewModel = makeViewModel()
+        let originalAdded = viewModel.diffResult.added.count
+
+        viewModel.swapDirection()
+        viewModel.swapDirection()
+
+        #expect(!viewModel.isSwapped)
+        #expect(viewModel.diffResult.added.count == originalAdded)
+        #expect(viewModel.diffResult.baselineName == "baseline")
+    }
 }

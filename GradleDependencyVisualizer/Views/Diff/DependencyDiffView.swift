@@ -20,6 +20,8 @@ struct DependencyDiffView: View {
             Text("Dependency Diff")
                 .font(.headline)
 
+            directionIndicator
+
             Spacer()
 
             summaryText
@@ -34,6 +36,23 @@ struct DependencyDiffView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+    }
+
+    private var directionIndicator: some View {
+        HStack(spacing: 4) {
+            Text(viewModel.diffResult.baselineName)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button(action: { viewModel.swapDirection() }) {
+                Image(systemName: "arrow.right.arrow.left")
+                    .font(.caption)
+            }
+            .buttonStyle(.borderless)
+            .help("Swap comparison direction")
+            Text(viewModel.diffResult.currentName)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var summaryText: some View {

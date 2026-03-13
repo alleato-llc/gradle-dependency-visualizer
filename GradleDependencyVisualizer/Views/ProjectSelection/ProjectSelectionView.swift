@@ -23,8 +23,8 @@ struct ProjectSelectionView: View {
                 }
             }
 
-            Button("Import JSON\u{2026}") {
-                viewModel.importFromJSON()
+            Button("Import\u{2026}") {
+                viewModel.importFromFile()
             }
 
             Picker("Configuration", selection: $viewModel.selectedConfiguration) {

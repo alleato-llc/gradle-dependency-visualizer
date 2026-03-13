@@ -85,14 +85,18 @@ struct ContentView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
-        panel.message = "Select a baseline dependency tree JSON"
+        panel.allowedContentTypes = [.json, .plainText]
+        panel.message = "Select a baseline dependency tree file (JSON or Gradle text output)"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         do {
             let data = try Data(contentsOf: url)
-            let baseline = try JsonTreeImporter.importTree(from: data)
+            let baseline = try TreeImporter.importTree(
+                from: data,
+                fileName: url.lastPathComponent,
+                fallbackConfiguration: projectSelectionViewModel.selectedConfiguration
+            )
             guard let currentTree = projectSelectionViewModel.dependencyTree else { return }
             diffViewModel = DependencyDiffViewModel(
                 baseline: baseline, current: currentTree, fileExporter: container.fileExporter

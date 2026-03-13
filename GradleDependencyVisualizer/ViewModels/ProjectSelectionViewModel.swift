@@ -75,19 +75,23 @@ final class ProjectSelectionViewModel {
         return false
     }
 
-    func importFromJSON() {
+    func importFromFile() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
-        panel.message = "Select a dependency tree JSON file"
+        panel.allowedContentTypes = [.json, .plainText]
+        panel.message = "Select a dependency tree file (JSON or Gradle text output)"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         do {
             let data = try Data(contentsOf: url)
-            let tree = try JsonTreeImporter.importTree(from: data)
+            let tree = try TreeImporter.importTree(
+                from: data,
+                fileName: url.lastPathComponent,
+                fallbackConfiguration: selectedConfiguration
+            )
             dependencyTree = tree
         } catch {
             errorPresenter.present(error)

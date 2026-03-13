@@ -1,0 +1,88 @@
+name: GradleDependencyVisualizer
+options:
+  bundleIdPrefix: com.alleato
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  minimumXcodeGenVersion: "2.42.0"
+
+packages:
+  GradleDependencyVisualizerCore:
+    path: Packages/GradleDependencyVisualizerCore
+  GradleDependencyVisualizerServices:
+    path: Packages/GradleDependencyVisualizerServices
+  GradleDependencyVisualizerTestSupport:
+    path: Packages/GradleDependencyVisualizerTestSupport
+  swift-argument-parser:
+    url: https://github.com/apple/swift-argument-parser
+    from: "1.3.0"
+
+targets:
+  GradleDependencyVisualizer:
+    type: application
+    platform: macOS
+    sources:
+      - GradleDependencyVisualizer
+    dependencies:
+      - package: GradleDependencyVisualizerCore
+      - package: GradleDependencyVisualizerServices
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alleato.gradledependencyvisualizer
+        SWIFT_VERSION: 6.0
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "Gradle Visualizer"
+    entitlements:
+      path: GradleDependencyVisualizer/GradleDependencyVisualizer.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+
+  GradleDependencyVisualizerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - GradleDependencyVisualizerTests
+    dependencies:
+      - target: GradleDependencyVisualizer
+      - package: GradleDependencyVisualizerTestSupport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alleato.gradledependencyvisualizer.tests
+        SWIFT_VERSION: 6.0
+        GENERATE_INFOPLIST_FILE: YES
+
+  GradleDependencyVisualizerCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - GradleDependencyVisualizerCLI
+    dependencies:
+      - package: GradleDependencyVisualizerCore
+      - package: GradleDependencyVisualizerServices
+      - package: swift-argument-parser
+        product: ArgumentParser
+    settings:
+      base:
+        SWIFT_VERSION: 6.0
+
+schemes:
+  GradleDependencyVisualizer:
+    build:
+      targets:
+        GradleDependencyVisualizer: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GradleDependencyVisualizerTests
+
+  GradleDependencyVisualizerCLI:
+    build:
+      targets:
+        GradleDependencyVisualizerCLI: all
+    run:
+      config: Debug

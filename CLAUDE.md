@@ -40,7 +40,10 @@ xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test
 ## Component Naming
 
 - ViewModels: `*ViewModel` (`@Observable @MainActor final class`)
-- Calculators: `*Calculator` (stateless enums with static methods)
+- Calculators: `*Calculator` (stateless enums with static methods — analysis/computation)
+- Generators: `*Generator` (stateless enums — produce formatted text/data output)
+- Exporters: `*Exporter` (stateless enums — serialize domain types to a format)
+- Importers: `*Importer` (stateless enums — deserialize from a format to domain types)
 - Protocols: `GradleRunner`, `GradleDependencyParser`
 - Test doubles: `Test*` prefix, `@unchecked Sendable`
 - Factories: `Test*Factory` with sensible defaults

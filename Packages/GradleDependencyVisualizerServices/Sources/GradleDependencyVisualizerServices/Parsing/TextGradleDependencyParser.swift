@@ -134,15 +134,26 @@ public struct TextGradleDependencyParser: GradleDependencyParser {
             depString = String(depString[..<arrowRange.lowerBound])
         }
 
-        // Parse group:artifact:version
+        // Parse group:artifact:version or group:artifact (when version comes via ->)
         let parts = depString.split(separator: ":", maxSplits: 2).map(String.init)
-        guard parts.count >= 3 else { return nil }
+        guard parts.count >= 2 else { return nil }
+
+        let requestedVersion: String
+        if parts.count >= 3 {
+            requestedVersion = parts[2]
+        } else if let resolved = resolvedVersion {
+            // group:artifact -> version (no explicit requested version, e.g. BOM-managed)
+            requestedVersion = resolved
+            resolvedVersion = nil
+        } else {
+            return nil
+        }
 
         return ParsedDependency(
             depth: depth,
             group: parts[0],
             artifact: parts[1],
-            requestedVersion: parts[2],
+            requestedVersion: requestedVersion,
             resolvedVersion: resolvedVersion,
             isOmitted: isOmitted,
             isConstraint: isConstraint

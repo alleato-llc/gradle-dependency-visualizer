@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import os
+import UniformTypeIdentifiers
 import GradleDependencyVisualizerCore
 import GradleDependencyVisualizerServices
 
@@ -56,11 +57,41 @@ final class ProjectSelectionViewModel {
 
     func handleDroppedURL(_ url: URL) -> Bool {
         var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else {
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else {
             return false
         }
-        setProjectPath(url.path)
-        return true
+
+        if isDir.boolValue {
+            setProjectPath(url.path)
+            return true
+        }
+
+        let filename = url.lastPathComponent
+        if filename == "build.gradle" || filename == "build.gradle.kts" {
+            setProjectPath(url.deletingLastPathComponent().path)
+            return true
+        }
+
+        return false
+    }
+
+    func importFromJSON() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        panel.message = "Select a dependency tree JSON file"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let tree = try JsonTreeImporter.importTree(from: data)
+            dependencyTree = tree
+        } catch {
+            errorPresenter.present(error)
+        }
     }
 
     func loadDependencies() {

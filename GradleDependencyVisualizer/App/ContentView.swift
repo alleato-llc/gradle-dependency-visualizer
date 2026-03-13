@@ -1,11 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import GradleDependencyVisualizerCore
+import GradleDependencyVisualizerServices
 
 struct ContentView: View {
     let container: DependencyContainer
     @State private var projectSelectionViewModel: ProjectSelectionViewModel
     @State private var graphViewModel: DependencyGraphViewModel?
     @State private var conflictViewModel: ConflictTableViewModel?
+    @State private var diffViewModel: DependencyDiffViewModel?
     @State private var showConflicts = false
 
     init(container: DependencyContainer) {
@@ -21,14 +24,18 @@ struct ContentView: View {
             ProjectSelectionView(viewModel: projectSelectionViewModel)
                 .frame(minWidth: 250)
         } detail: {
-            if let graphViewModel {
-                VStack(spacing: 0) {
-                    DependencyGraphView(viewModel: graphViewModel)
+            if let diffViewModel {
+                DependencyDiffView(viewModel: diffViewModel, onDismiss: {
+                    self.diffViewModel = nil
+                })
+            } else if let graphViewModel {
+                VSplitView {
+                    DependencyGraphView(viewModel: graphViewModel, onCompare: compareAgainstBaseline)
+                        .frame(minHeight: 200)
 
                     if showConflicts, let conflictViewModel {
-                        Divider()
                         ConflictTableView(viewModel: conflictViewModel)
-                            .frame(height: 200)
+                            .frame(minHeight: 100, idealHeight: 200)
                     }
                 }
                 .toolbar {
@@ -44,8 +51,19 @@ struct ContentView: View {
                 ContentUnavailableView(
                     "No Project Selected",
                     systemImage: "folder.badge.questionmark",
-                    description: Text("Select or drop a Gradle project folder to visualize its dependencies.")
+                    description: Text("Select or drop a Gradle project folder or build.gradle file to visualize its dependencies.")
                 )
+                .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
+                    guard let provider = providers.first else { return false }
+                    _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                        if let url {
+                            Task { @MainActor in
+                                _ = projectSelectionViewModel.handleDroppedURL(url)
+                            }
+                        }
+                    }
+                    return true
+                }
             }
         }
         .onChange(of: projectSelectionViewModel.dependencyTree) { _, tree in
@@ -53,10 +71,34 @@ struct ContentView: View {
                 graphViewModel = DependencyGraphViewModel(tree: tree, fileExporter: container.fileExporter)
                 conflictViewModel = ConflictTableViewModel(tree: tree, fileExporter: container.fileExporter)
                 showConflicts = false
+                diffViewModel = nil
             } else {
                 graphViewModel = nil
                 conflictViewModel = nil
+                diffViewModel = nil
             }
+        }
+    }
+
+    private func compareAgainstBaseline() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        panel.message = "Select a baseline dependency tree JSON"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let baseline = try JsonTreeImporter.importTree(from: data)
+            guard let currentTree = projectSelectionViewModel.dependencyTree else { return }
+            diffViewModel = DependencyDiffViewModel(
+                baseline: baseline, current: currentTree, fileExporter: container.fileExporter
+            )
+        } catch {
+            projectSelectionViewModel.errorPresenter.present(error)
         }
     }
 }

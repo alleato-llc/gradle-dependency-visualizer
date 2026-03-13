@@ -1,5 +1,6 @@
 import SwiftUI
 import GradleDependencyVisualizerCore
+import GradleDependencyVisualizerServices
 
 struct ProjectSelectionView: View {
     @Bindable var viewModel: ProjectSelectionViewModel
@@ -20,6 +21,10 @@ struct ProjectSelectionView: View {
                 Button("Browse…") {
                     viewModel.selectProjectViaOpenPanel()
                 }
+            }
+
+            Button("Import JSON\u{2026}") {
+                viewModel.importFromJSON()
             }
 
             Picker("Configuration", selection: $viewModel.selectedConfiguration) {
@@ -64,6 +69,8 @@ struct ProjectSelectionView: View {
             if let tree = viewModel.dependencyTree {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(tree.totalNodeCount) dependencies")
+                        .font(.caption)
+                    Text("\(DependencyAnalysisCalculator.uniqueCoordinates(from: tree).count) distinct dependencies")
                         .font(.caption)
                     Text("Max depth: \(tree.maxDepth)")
                         .font(.caption)

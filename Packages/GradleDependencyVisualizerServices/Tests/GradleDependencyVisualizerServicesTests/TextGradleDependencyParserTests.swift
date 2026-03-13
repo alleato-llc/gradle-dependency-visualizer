@@ -134,6 +134,38 @@ struct TextGradleDependencyParserTests {
     }
 
     @Test
+    func parsesBomManagedDependencyWithoutRequestedVersion() {
+        let output = """
+        +--- org.springframework.boot:spring-boot-starter-web -> 3.5.11
+        """
+
+        let tree = parser.parse(output: output, projectName: "test", configuration: .compileClasspath)
+        #expect(tree.roots.count == 1)
+        let node = tree.roots[0]
+        #expect(node.group == "org.springframework.boot")
+        #expect(node.artifact == "spring-boot-starter-web")
+        #expect(node.requestedVersion == "3.5.11")
+        #expect(node.resolvedVersion == nil)
+        #expect(node.hasConflict == false)
+    }
+
+    @Test
+    func parsesBomManagedDependencyWithChildren() {
+        let output = """
+        +--- org.springframework.boot:spring-boot-starter-web -> 3.5.11
+        |    +--- org.springframework.boot:spring-boot-starter:3.5.11
+        |    \\--- org.springframework:spring-webmvc:6.2.16
+        """
+
+        let tree = parser.parse(output: output, projectName: "test", configuration: .compileClasspath)
+        #expect(tree.roots.count == 1)
+        #expect(tree.roots[0].artifact == "spring-boot-starter-web")
+        #expect(tree.roots[0].children.count == 2)
+        #expect(tree.roots[0].children[0].artifact == "spring-boot-starter")
+        #expect(tree.roots[0].children[1].artifact == "spring-webmvc")
+    }
+
+    @Test
     func emptyOutputProducesEmptyTree() {
         let tree = parser.parse(output: "", projectName: "test", configuration: .compileClasspath)
         #expect(tree.roots.isEmpty)

@@ -9,12 +9,43 @@ private struct ContentOffsetKey: PreferenceKey {
     }
 }
 
+/// Finds the enclosing NSScrollView from any NSView in the hierarchy.
+private struct ScrollViewFinder: NSViewRepresentable {
+    var onFound: (NSScrollView) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let scrollView = findScrollView(from: view) {
+                onFound(scrollView)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private func findScrollView(from view: NSView) -> NSScrollView? {
+        var current: NSView? = view
+        while let parent = current?.superview {
+            if let scrollView = parent as? NSScrollView {
+                return scrollView
+            }
+            current = parent
+        }
+        return nil
+    }
+}
+
 struct DependencyGraphView: View {
     @Bindable var viewModel: DependencyGraphViewModel
+    var onCompare: (() -> Void)?
     @State private var baseScale: CGFloat = 1.0
     @State private var viewportSize: CGSize = .zero
     @State private var contentOffset: CGPoint = .zero
     @State private var depthSliderValue: Double = 0
+    @State private var searchDebounceTask: Task<Void, Never>?
+    @State private var nsScrollView: NSScrollView?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +58,11 @@ struct DependencyGraphView: View {
                                 key: ContentOffsetKey.self,
                                 value: geo.frame(in: .named("scroll")).origin
                             )
+                        }
+                    )
+                    .background(
+                        ScrollViewFinder { scrollView in
+                            nsScrollView = scrollView
                         }
                     )
             }
@@ -59,6 +95,50 @@ struct DependencyGraphView: View {
         .onAppear {
             depthSliderValue = Double(viewModel.maxTreeDepth)
         }
+        .onChange(of: viewModel.searchText) { _, _ in
+            viewModel.focusedMatchIndex = 0
+            searchDebounceTask?.cancel()
+            searchDebounceTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                scrollToFocusedMatch()
+            }
+        }
+    }
+
+    private func scrollToFocusedMatch() {
+        guard let nodeId = viewModel.focusedMatchId,
+              let scrollView = nsScrollView else { return }
+
+        let center = viewModel.effectivePosition(for: nodeId)
+        let scale = viewModel.zoomScale
+
+        // Target point in scaled content coordinates
+        let targetX = center.x * scale
+        let targetY = center.y * scale
+
+        // Scroll so the node is centered in the visible area
+        let clipBounds = scrollView.contentView.bounds
+        let contentSize = scrollView.documentView?.frame.size ?? .zero
+
+        let scrollX = max(0, min(targetX - clipBounds.width / 2, contentSize.width - clipBounds.width))
+        // NSScrollView has flipped coordinates (origin at top-left for flipped documentView)
+        let scrollY: CGFloat
+        if scrollView.documentView?.isFlipped == true {
+            scrollY = max(0, min(targetY - clipBounds.height / 2, contentSize.height - clipBounds.height))
+        } else {
+            // Non-flipped: origin at bottom-left, SwiftUI content grows downward
+            let flippedTargetY = contentSize.height - targetY
+            scrollY = max(0, min(flippedTargetY - clipBounds.height / 2, contentSize.height - clipBounds.height))
+        }
+
+        let newOrigin = NSPoint(x: scrollX, y: scrollY)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            scrollView.contentView.animator().setBoundsOrigin(newOrigin)
+        }
+        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     private func updateViewport() {
@@ -77,6 +157,37 @@ struct DependencyGraphView: View {
             TextField("Search dependencies…", text: $viewModel.searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 300)
+                .onSubmit {
+                    viewModel.focusNextMatch()
+                    scrollToFocusedMatch()
+                }
+
+            if !viewModel.sortedMatchIds.isEmpty {
+                HStack(spacing: 4) {
+                    Text("\(viewModel.focusedMatchIndex % viewModel.sortedMatchIds.count + 1)/\(viewModel.sortedMatchIds.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+
+                    Button(action: {
+                        viewModel.focusPreviousMatch()
+                        scrollToFocusedMatch()
+                    }) {
+                        Image(systemName: "chevron.up")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+
+                    Button(action: {
+                        viewModel.focusNextMatch()
+                        scrollToFocusedMatch()
+                    }) {
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
 
             Spacer()
 
@@ -103,6 +214,7 @@ struct DependencyGraphView: View {
                         depthSliderValue = Double(viewModel.maxTreeDepth)
                     }
                     .font(.caption)
+                    .fixedSize()
                 }
             }
 
@@ -140,6 +252,16 @@ struct DependencyGraphView: View {
 
             Button("Export PNG") {
                 viewModel.exportGraphAsPNG(view: graphContent(scaled: false))
+            }
+
+            Button("Export JSON") {
+                viewModel.exportAsJSON()
+            }
+
+            if let onCompare {
+                Button("Compare…") {
+                    onCompare()
+                }
             }
         }
         .padding(.horizontal)

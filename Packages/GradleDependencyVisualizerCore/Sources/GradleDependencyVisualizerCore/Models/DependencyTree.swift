@@ -1,4 +1,4 @@
-public struct DependencyTree: Sendable, Equatable {
+public struct DependencyTree: Sendable, Equatable, Codable {
     public static func == (lhs: DependencyTree, rhs: DependencyTree) -> Bool {
         lhs.projectName == rhs.projectName
             && lhs.configuration == rhs.configuration

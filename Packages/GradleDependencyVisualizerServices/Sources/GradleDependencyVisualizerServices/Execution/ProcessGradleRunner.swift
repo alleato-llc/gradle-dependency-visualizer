@@ -1,6 +1,23 @@
 import Foundation
 import GradleDependencyVisualizerCore
 
+private final class DataAccumulator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _data = Data()
+
+    func append(_ chunk: Data) {
+        lock.lock()
+        defer { lock.unlock() }
+        _data.append(chunk)
+    }
+
+    var data: Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return _data
+    }
+}
+
 public struct ProcessGradleRunner: GradleRunner {
     public init() {}
 
@@ -29,15 +46,44 @@ public struct ProcessGradleRunner: GradleRunner {
             process.standardOutput = pipe
             process.standardError = errorPipe
 
+            // Read stdout/stderr eagerly to avoid pipe buffer deadlock.
+            // If the process writes more than the pipe buffer (~64KB),
+            // it blocks until the reader drains the pipe. Reading inside
+            // terminationHandler is too late — the process can't terminate
+            // while blocked on a full pipe.
+            let stdoutAccumulator = DataAccumulator()
+            let stderrAccumulator = DataAccumulator()
+
+            pipe.fileHandleForReading.readabilityHandler = { handle in
+                let chunk = handle.availableData
+                if chunk.isEmpty {
+                    handle.readabilityHandler = nil
+                } else {
+                    stdoutAccumulator.append(chunk)
+                }
+            }
+            errorPipe.fileHandleForReading.readabilityHandler = { handle in
+                let chunk = handle.availableData
+                if chunk.isEmpty {
+                    handle.readabilityHandler = nil
+                } else {
+                    stderrAccumulator.append(chunk)
+                }
+            }
+
             process.terminationHandler = { process in
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: data, encoding: .utf8) ?? ""
+                // Drain any remaining data
+                pipe.fileHandleForReading.readabilityHandler = nil
+                stdoutAccumulator.append(pipe.fileHandleForReading.readDataToEndOfFile())
+                errorPipe.fileHandleForReading.readabilityHandler = nil
+                stderrAccumulator.append(errorPipe.fileHandleForReading.readDataToEndOfFile())
+
+                let output = String(data: stdoutAccumulator.data, encoding: .utf8) ?? ""
 
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: output)
                 } else {
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                    let errorOutput = String(data: stderrAccumulator.data, encoding: .utf8) ?? ""
                     continuation.resume(throwing: GradleRunnerError.executionFailed(
                         exitCode: process.terminationStatus,
                         stderr: errorOutput

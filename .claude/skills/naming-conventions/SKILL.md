@@ -14,13 +14,16 @@ version: 1.0.0
 | `*ViewModel` | Orchestrates business logic for a screen | Yes — runners, parsers | `ProjectSelectionViewModel` |
 | `*Runner` | External process boundary (protocol or impl) | Yes — Foundation.Process (impl) | `GradleRunner` |
 | `*Parser` | Text/data parsing boundary (protocol or impl) | No — takes text, returns domain types | `GradleDependencyParser` |
-| `*Calculator` | Standalone logic — pure computation | No — takes inputs, returns outputs | `DependencyAnalysisCalculator` |
+| `*Calculator` | Standalone logic — pure computation, analysis | No — takes inputs, returns outputs | `DependencyAnalysisCalculator` |
+| `*Generator` | Standalone logic — produces text/data output | No — takes inputs, returns formatted output | `GradleTreeTextGenerator` |
+| `*Exporter` | Standalone logic — serializes to a format | No — takes domain types, returns encoded data | `JsonTreeExporter` |
+| `*Importer` | Standalone logic — deserializes from a format | No — takes encoded data, returns domain types | `JsonTreeImporter` |
 | `*Presenter` | Centralized UI concern (e.g., error display) | No — holds state for View binding | `ErrorPresenter` |
 | `*Factory` | Test data builders | No — creates test objects | `TestDependencyTreeFactory` |
 
 ### Key rule: `*ViewModel` implies dependencies
 
-A type named `*ViewModel` tells the reader it orchestrates other components — it has constructor-injected dependencies. If a type performs self-contained logic with no dependencies, use `*Calculator`.
+A type named `*ViewModel` tells the reader it orchestrates other components — it has constructor-injected dependencies. If a type performs self-contained logic with no dependencies, choose a suffix that describes its purpose: `*Calculator` for analysis/computation, `*Generator` for producing formatted output, `*Exporter`/`*Importer` for serialization boundaries.
 
 ## Protocol vs Implementation vs Test Fake
 
@@ -80,6 +83,9 @@ TestGradleRunner.swift               # Test fake
 DependencyGraphView.swift            # View
 DependencyGraphViewModel.swift       # ViewModel
 DependencyAnalysisCalculator.swift   # Calculator
+GradleTreeTextGenerator.swift        # Generator
+JsonTreeExporter.swift               # Exporter
+JsonTreeImporter.swift               # Importer
 ```
 
 ## Model and Enum naming
@@ -109,5 +115,5 @@ When creating or reviewing types, verify:
 - [ ] Protocols use plain domain names without prefixes or suffixes
 - [ ] Implementations use technology prefix (Process*, Text*, Test*)
 - [ ] File name matches the primary type name
-- [ ] `*ViewModel` types actually have dependencies — standalone logic uses descriptive names
+- [ ] `*ViewModel` types actually have dependencies — standalone logic uses `*Calculator`, `*Generator`, `*Exporter`, or `*Importer`
 - [ ] Test factory methods use `make*` prefix

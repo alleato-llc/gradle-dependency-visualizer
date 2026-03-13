@@ -1,6 +1,7 @@
 import Foundation
 import os
 import SwiftUI
+import UniformTypeIdentifiers
 import GradleDependencyVisualizerCore
 import GradleDependencyVisualizerServices
 
@@ -40,6 +41,8 @@ final class DependencyGraphViewModel {
     }
     private(set) var hiddenByCollapse: Set<String> = []
 
+    var focusedMatchIndex: Int = 0
+
     var filteredNodes: Set<String> {
         guard !searchText.isEmpty else { return Set() }
         let query = searchText.lowercased()
@@ -48,6 +51,37 @@ final class DependencyGraphViewModel {
                 .filter { $0.coordinate.lowercased().contains(query) }
                 .map(\.id)
         )
+    }
+
+    var sortedMatchIds: [String] {
+        guard !searchText.isEmpty else { return [] }
+        let query = searchText.lowercased()
+        return nodePositions
+            .filter { pos in
+                guard let node = nodeMap[pos.nodeId] else { return false }
+                return node.coordinate.lowercased().contains(query)
+            }
+            .sorted { $0.y == $1.y ? $0.x < $1.x : $0.y < $1.y }
+            .map(\.nodeId)
+    }
+
+    var focusedMatchId: String? {
+        let matches = sortedMatchIds
+        guard !matches.isEmpty else { return nil }
+        let index = focusedMatchIndex % matches.count
+        return matches[index]
+    }
+
+    func focusNextMatch() {
+        let count = sortedMatchIds.count
+        guard count > 0 else { return }
+        focusedMatchIndex = (focusedMatchIndex + 1) % count
+    }
+
+    func focusPreviousMatch() {
+        let count = sortedMatchIds.count
+        guard count > 0 else { return }
+        focusedMatchIndex = (focusedMatchIndex - 1 + count) % count
     }
 
     init(tree: DependencyTree, fileExporter: any FileExporter) {
@@ -253,6 +287,15 @@ final class DependencyGraphViewModel {
         let center = effectivePosition(for: nodeId)
         let size = nodeSize(for: subtreeSize(for: nodeId))
         return CGPoint(x: center.x, y: center.y - size.height / 2)
+    }
+
+    func exportAsJSON() {
+        do {
+            let data = try JsonTreeExporter.export(tree: tree)
+            try fileExporter.saveData(data, defaultName: "\(tree.projectName)-dependencies.json", contentType: .json)
+        } catch {
+            logger.error("Failed to export JSON: \(error.localizedDescription)")
+        }
     }
 
     func exportGraphAsPNG(view: some View) {

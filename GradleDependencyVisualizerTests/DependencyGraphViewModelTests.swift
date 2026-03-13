@@ -1,6 +1,9 @@
+import Foundation
 import Testing
 import CoreGraphics
+import UniformTypeIdentifiers
 import GradleDependencyVisualizerCore
+import GradleDependencyVisualizerServices
 import GradleDependencyVisualizerTestSupport
 @testable import GradleDependencyVisualizer
 
@@ -224,5 +227,21 @@ struct DependencyGraphViewModelTests {
 
         #expect(viewModel.omittedIds.contains(omittedNode.id))
         #expect(!viewModel.omittedIds.contains(root.id))
+    }
+
+    // MARK: - JSON Export Tests
+
+    @Test @MainActor
+    func exportAsJSONCallsFileExporter() throws {
+        let tree = TestDependencyTreeFactory.makeSimpleTree()
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        viewModel.exportAsJSON()
+
+        #expect(fileExporter.saveCallCount == 1)
+        #expect(fileExporter.savedContentType == .json)
+        let savedData = try #require(fileExporter.savedData)
+        let decoded = try JSONDecoder().decode(DependencyTree.self, from: savedData)
+        #expect(decoded.projectName == tree.projectName)
     }
 }

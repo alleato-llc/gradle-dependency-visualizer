@@ -1,4 +1,4 @@
-public enum GradleConfiguration: String, Sendable, CaseIterable {
+public enum GradleConfiguration: String, Sendable, CaseIterable, Codable {
     case compileClasspath
     case runtimeClasspath
     case implementationDependenciesMetadata

@@ -1,6 +1,6 @@
 ---
 name: app-icon
-version: 1.0.0
+version: 1.1.0
 category: Build
 description: Programmatic app icon generation via Python/Pillow, integrated into XcodeGen build
 ---

@@ -1,13 +1,11 @@
 import Foundation
 import GradleDependencyVisualizerCore
 
-public enum ConflictReportFormat: String, Sendable {
-    case text
-    case json
-}
+@available(*, deprecated, renamed: "ReportFormat")
+public typealias ConflictReportFormat = ReportFormat
 
 public enum ConflictReportGenerator {
-    public static func report(tree: DependencyTree, format: ConflictReportFormat) -> String {
+    public static func report(tree: DependencyTree, format: ReportFormat) -> String {
         switch format {
         case .text:
             textReport(tree: tree)

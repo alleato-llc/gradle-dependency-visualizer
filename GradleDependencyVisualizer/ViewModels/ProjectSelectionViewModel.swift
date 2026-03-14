@@ -5,6 +5,13 @@ import UniformTypeIdentifiers
 import GradleDependencyVisualizerCore
 import GradleDependencyVisualizerServices
 
+enum ModuleLoadStatus {
+    case pending
+    case loading
+    case loaded
+    case failed(String)
+}
+
 @Observable @MainActor
 final class ProjectSelectionViewModel {
     private let gradleRunner: any GradleRunner
@@ -19,7 +26,37 @@ final class ProjectSelectionViewModel {
 
     var discoveredModules: [GradleModule] = []
     var selectedModules: Set<String> = []
+    var skippedModules: [String] = []
+    var moduleLoadStatus: [String: ModuleLoadStatus] = [:]
+    var moduleSearchText: String = ""
     var isMultiModule: Bool { !discoveredModules.isEmpty }
+
+    var filteredModules: [GradleModule] {
+        if moduleSearchText.isEmpty {
+            return discoveredModules
+        }
+        return discoveredModules.filter { $0.path.localizedCaseInsensitiveContains(moduleSearchText) }
+    }
+
+    var modulesCompleted: Int {
+        moduleLoadStatus.values.filter {
+            switch $0 {
+            case .loaded, .failed: return true
+            default: return false
+            }
+        }.count
+    }
+
+    var modulesTotal: Int {
+        moduleLoadStatus.count
+    }
+
+    var loadSummary: String? {
+        guard !skippedModules.isEmpty else { return nil }
+        let total = discoveredModules.filter { selectedModules.contains($0.id) }.count
+        let loaded = total - skippedModules.count
+        return "Loaded \(loaded)/\(total) modules (\(skippedModules.count) skipped)"
+    }
 
     var isShowingError: Bool {
         get { errorPresenter.isShowingError }
@@ -53,6 +90,7 @@ final class ProjectSelectionViewModel {
         projectPath = path
         discoveredModules = []
         selectedModules = []
+        moduleLoadStatus = [:]
         let gradlewPath = (path as NSString).appendingPathComponent("gradlew")
         if !FileManager.default.isExecutableFile(atPath: gradlewPath) {
             errorPresenter.present(GradleDependencyVisualizerError.gradlewNotFound)
@@ -205,10 +243,21 @@ final class ProjectSelectionViewModel {
 
         isLoading = true
         dependencyTree = nil
+        skippedModules = []
+        moduleLoadStatus = Dictionary(uniqueKeysWithValues: modules.map { ($0.id, ModuleLoadStatus.pending) })
 
         Task {
             defer { isLoading = false }
-            let moduleTrees = await loadModulesConcurrently(modules)
+            let (moduleTrees, skipped) = await loadModulesConcurrently(
+                modules,
+                onModuleStarted: { [weak self] id in
+                    self?.moduleLoadStatus[id] = .loading
+                },
+                onModuleCompleted: { [weak self] id, status in
+                    self?.moduleLoadStatus[id] = status
+                }
+            )
+            skippedModules = skipped
             if moduleTrees.isEmpty {
                 errorPresenter.present(GradleDependencyVisualizerError.noModulesLoaded)
                 return
@@ -219,24 +268,28 @@ final class ProjectSelectionViewModel {
                 configuration: selectedConfiguration,
                 moduleTrees: moduleTrees
             )
-            logger.info("Loaded \(self.dependencyTree?.totalNodeCount ?? 0) dependencies across \(moduleTrees.count) modules")
+            logger.info("Loaded \(moduleTrees.count)/\(modules.count) modules (\(skipped.count) skipped)")
         }
     }
 
     private func loadModulesConcurrently(
-        _ modules: [GradleModule]
-    ) async -> [(module: GradleModule, tree: DependencyTree)] {
-        let maxConcurrency = 8
+        _ modules: [GradleModule],
+        onModuleStarted: @MainActor @Sendable (String) -> Void,
+        onModuleCompleted: @MainActor @Sendable (String, ModuleLoadStatus) -> Void
+    ) async -> (loaded: [(module: GradleModule, tree: DependencyTree)], skipped: [String]) {
+        let maxConcurrency = 4
         let projectName = (projectPath as NSString).lastPathComponent
 
         return await withTaskGroup(
             of: (GradleModule, DependencyTree?).self,
-            returning: [(module: GradleModule, tree: DependencyTree)].self
+            returning: (loaded: [(module: GradleModule, tree: DependencyTree)], skipped: [String]).self
         ) { group in
             var results: [(module: GradleModule, tree: DependencyTree)] = []
+            var skipped: [String] = []
             var index = 0
 
             for module in modules.prefix(maxConcurrency) {
+                await onModuleStarted(module.id)
                 group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser, logger] in
                     do {
                         let output = try await gradleRunner.runDependencies(
@@ -261,10 +314,15 @@ final class ProjectSelectionViewModel {
             for await result in group {
                 if let tree = result.1 {
                     results.append((module: result.0, tree: tree))
+                    await onModuleCompleted(result.0.id, .loaded)
+                } else {
+                    skipped.append(result.0.path)
+                    await onModuleCompleted(result.0.id, .failed("Failed to load dependencies"))
                 }
 
                 if index < modules.count {
                     let nextModule = modules[index]
+                    await onModuleStarted(nextModule.id)
                     group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser, logger] in
                         do {
                             let output = try await gradleRunner.runDependencies(
@@ -287,8 +345,10 @@ final class ProjectSelectionViewModel {
                 }
             }
 
-            // Sort by module path for deterministic ordering
-            return results.sorted { $0.module.path < $1.module.path }
+            return (
+                loaded: results.sorted { $0.module.path < $1.module.path },
+                skipped: skipped.sorted()
+            )
         }
     }
 }

@@ -98,6 +98,7 @@ enum TreeLoader {
         }
 
         var moduleTrees: [(module: GradleModule, tree: DependencyTree)] = []
+        var skippedCount = 0
         for mod in modules {
             do {
                 let output = try await runner.runDependencies(
@@ -106,11 +107,15 @@ enum TreeLoader {
                 let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
                 moduleTrees.append((module: mod, tree: moduleTree))
             } catch {
+                skippedCount += 1
                 FileHandle.standardError.write(Data("Warning: skipping module \(mod.path): \(error.localizedDescription)\n".utf8))
             }
         }
         guard !moduleTrees.isEmpty else {
-            throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'")
+            throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'. All \(modules.count) modules failed.")
+        }
+        if skippedCount > 0 {
+            FileHandle.standardError.write(Data("Loaded \(moduleTrees.count)/\(modules.count) modules (\(skippedCount) skipped)\n".utf8))
         }
         return MultiModuleTreeCalculator.assemble(
             projectName: projectName,
@@ -159,6 +164,7 @@ enum TreeLoader {
             }
 
             var moduleTrees: [(module: GradleModule, tree: DependencyTree)] = []
+            var skippedCount = 0
             for mod in modules {
                 do {
                     let output = try await runner.runDependencies(
@@ -167,11 +173,15 @@ enum TreeLoader {
                     let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
                     moduleTrees.append((module: mod, tree: moduleTree))
                 } catch {
+                    skippedCount += 1
                     FileHandle.standardError.write(Data("Warning: skipping module \(mod.path): \(error.localizedDescription)\n".utf8))
                 }
             }
             guard !moduleTrees.isEmpty else {
-                throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'")
+                throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'. All \(modules.count) modules failed.")
+            }
+            if skippedCount > 0 {
+                FileHandle.standardError.write(Data("Loaded \(moduleTrees.count)/\(modules.count) modules (\(skippedCount) skipped)\n".utf8))
             }
             return MultiModuleTreeCalculator.assemble(
                 projectName: projectName,

@@ -106,6 +106,8 @@ struct ContentView: View {
                         }
                     }
                 }
+            } else if projectSelectionViewModel.isMultiModule {
+                ModuleSelectionView(viewModel: projectSelectionViewModel)
             } else {
                 ContentUnavailableView(
                     "No Project Selected",

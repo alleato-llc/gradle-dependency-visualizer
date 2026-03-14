@@ -65,6 +65,7 @@ Detailed documentation in `docs/`:
 - [Duplicate Detection](docs/feature/DUPLICATE_DETECTION.md) — Cross-module and within-module duplicate dependency detection
 - [Import / Export](docs/feature/IMPORT_EXPORT.md) — File import and multi-format export
 - [Project Selection](docs/feature/PROJECT_SELECTION.md) — Project setup, configuration, and loading
+- [Risk Assessment](docs/feature/RISK_ASSESSMENT.md) — Conflict risk levels with BOM detection via dependencyInsight
 
 ## Key Design Decisions
 

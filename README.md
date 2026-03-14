@@ -4,6 +4,60 @@ A macOS SwiftUI app and CLI tool that visualizes Gradle dependency trees with in
 
 ![Graph](./docs/screenshots/graph.png)
 
+## Features
+
+### Graph Visualization
+- Interactive dependency graph with Reingold-Tilford tree layout
+- 11 color themes (Pastel, Ocean, Earth, Monochrome, High Contrast, Warm Gradient, Cool Gradient, Sunset, Forest, Neon, Nordic) assigned by group name hash
+- Conflict highlighting (red nodes for version conflicts)
+- Search with match navigation and auto-scroll
+- Zoom via trackpad pinch gesture or toolbar +/- buttons (10%–300%)
+- Depth limiting slider to focus on specific tree levels
+- Collapse/expand subtrees via double-click
+- Drag nodes to reposition manually
+- Hide omitted (deduplicated) nodes toggle
+- Viewport culling for performance on large graphs
+- Export as PNG or JSON
+
+### Multi-Module Project Support
+- Automatic submodule discovery via `./gradlew projects`
+- Module picker with select all/deselect all
+- Concurrent module loading (up to 8 in parallel)
+- Combined tree with synthetic module nodes as top-level roots
+- Single-module fallback when no submodules are detected
+
+### Conflict Detection
+- Inline conflict detection during parsing
+- Sortable conflict table (coordinate, requested version, resolved version, requested by)
+- Export conflicts as JSON
+
+### Dependency Table
+- Flat mode: unique dependencies with expandable "Used by" parents and occurrence counts
+- Tree mode: full collapsible hierarchy matching the original tree
+- Search filtering and conflicts-only toggle
+- Sortable by coordinate, version, occurrences, or group
+- Export as JSON
+
+### Dependency Diff
+- Compare current tree against a baseline (JSON or Gradle text file)
+- Categorizes changes as added, removed, version changed, or unchanged
+- Filterable by change type, searchable, sortable
+- Swap comparison direction
+- Export diff as JSON
+
+### Scope Validation
+- Detects 30+ test frameworks (JUnit 4/5, Mockito, TestNG, Spring Test, AssertJ, etc.) in production configurations
+- Recommends moving to `testImplementation` or `testRuntimeOnly`
+- Sortable results table with export
+
+### Import / Export
+- Import dependency trees from JSON or Gradle text output files
+- Export: JSON tree, PNG graph, conflict report (text/JSON), table JSON, diff JSON, scope validation JSON
+
+### Project Selection
+- Drag-and-drop Gradle project folder or `build.gradle(.kts)` file
+- Browse dialog, path validation, 11 Gradle configuration options with descriptions
+
 ## Prerequisites
 
 - macOS 14+
@@ -24,17 +78,18 @@ open GradleDependencyVisualizer.xcodeproj
 xcodebuild -scheme GradleDependencyVisualizerCLI -destination 'platform=macOS' build
 
 # Run tests
-cd Packages/GradleDependencyVisualizerServices && swift test   # Package tests (24 tests)
+cd Packages/GradleDependencyVisualizerServices && swift test   # Package tests (140 tests)
 cd ../..
-xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test   # App tests (25 tests)
+xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test   # App tests (51 tests)
 ```
 
 ## How It Works
 
 1. Drop a Gradle project folder (or browse with NSOpenPanel)
-2. The app runs `./gradlew dependencies --configuration <config> --console=plain`
-3. Parses the ASCII tree output into a structured dependency tree
-4. Renders an interactive graph with proportional node sizing, conflict highlighting, 11 color themes, subtree collapse/expand, depth limiting, and viewport culling for large graphs
+2. The app auto-discovers submodules via `./gradlew projects`
+3. Runs `./gradlew [:module:]dependencies --configuration <config> --console=plain` (concurrently for multi-module projects)
+4. Parses the ASCII tree output into a structured dependency tree
+5. Renders an interactive graph with conflict highlighting, search, zoom, and depth control
 
 ## Architecture
 
@@ -67,6 +122,15 @@ Dependency flow: `App/CLI → Services → Core`. TestSupport is test-only.
 
 # Report conflicts as JSON
 ./gradle-dependency-visualizer conflicts /path/to/project --format json
+
+# Multi-module: list discovered modules
+./gradle-dependency-visualizer graph /path/to/project --list-modules
+
+# Multi-module: analyze a specific module
+./gradle-dependency-visualizer graph /path/to/project --module :app
+
+# Multi-module: analyze all modules (default when submodules exist)
+./gradle-dependency-visualizer graph /path/to/project
 ```
 
 ## Documentation
@@ -77,3 +141,4 @@ See `docs/` for detailed documentation:
 - [Testing](docs/TESTING.md) — Testing strategy, infrastructure, conventions
 - [Dependency Visualization](docs/feature/DEPENDENCY_VISUALIZATION.md) — Graph rendering feature
 - [Conflict Detection](docs/feature/CONFLICT_DETECTION.md) — Conflict detection feature
+- [Dependency Table](docs/feature/DEPENDENCY_TABLE.md) — Table view feature (flat + tree modes)

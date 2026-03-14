@@ -97,6 +97,13 @@ public enum TestDependencyTreeFactory {
         )
     }
 
+    public static func makeModule(
+        name: String = "app",
+        path: String? = nil
+    ) -> GradleModule {
+        GradleModule(name: name, path: path ?? ":\(name)")
+    }
+
     public static func makeNode(
         group: String = "com.example",
         artifact: String = "lib",

@@ -34,7 +34,6 @@ final class DependencyGraphViewModel {
     var hideOmittedNodes: Bool = false
     var theme: GraphTheme = .pastel
     var maxVisibleDepth: Int? = nil
-    var viewportRect: CGRect? = nil
 
     var collapsedNodeIds: Set<String> = [] {
         didSet { recomputeHiddenByCollapse() }
@@ -140,12 +139,12 @@ final class DependencyGraphViewModel {
             tree.roots.contains(where: { $0.id == pos.nodeId })
         }
         let rootWidth = TreeLayoutCalculator.nodeWidth(for: 1)
+        // Position project root above the first root node so it's visible
+        // at the initial scroll position (top-left)
         let centerX: Double
-        if let minX = rootPositions.map({ $0.x }).min(),
-           let maxX = rootPositions.map({ pos in
-               pos.x + TreeLayoutCalculator.nodeWidth(for: pos.subtreeSize)
-           }).max() {
-            centerX = (minX + maxX) / 2 - rootWidth / 2
+        if let firstRootPos = rootPositions.first {
+            let firstRootWidth = TreeLayoutCalculator.nodeWidth(for: firstRootPos.subtreeSize)
+            centerX = firstRootPos.x + firstRootWidth / 2 - rootWidth / 2
         } else {
             centerX = 0
         }
@@ -233,12 +232,6 @@ final class DependencyGraphViewModel {
             if hideOmittedNodes && omittedIds.contains(pos.nodeId) { return false }
             if hiddenByCollapse.contains(pos.nodeId) { return false }
             if let maxDepth = maxVisibleDepth, let depth = nodeDepths[pos.nodeId], depth > maxDepth { return false }
-            if let viewport = viewportRect {
-                let size = nodeSize(for: pos.subtreeSize)
-                let nodeFrame = CGRect(x: pos.x - size.width / 2, y: pos.y - size.height / 2, width: size.width, height: size.height)
-                let expanded = viewport.insetBy(dx: -200, dy: -200)
-                if !nodeFrame.intersects(expanded) { return false }
-            }
             return true
         }
     }

@@ -182,31 +182,6 @@ struct DependencyGraphViewModelTests {
 
     // MARK: - Viewport Culling Tests
 
-    @Test @MainActor
-    func viewportCullingFiltersDistantNodes() {
-        let tree = TestDependencyTreeFactory.makeDeepTree(depth: 5)
-        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
-
-        let allCount = viewModel.visibleNodePositions.count
-
-        // Set a very small viewport that won't contain all nodes
-        viewModel.viewportRect = CGRect(x: 0, y: 0, width: 100, height: 100)
-        let culledCount = viewModel.visibleNodePositions.count
-
-        #expect(culledCount <= allCount)
-    }
-
-    @Test @MainActor
-    func viewportNilShowsAllNodes() {
-        let tree = TestDependencyTreeFactory.makeSimpleTree()
-        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
-
-        viewModel.viewportRect = nil
-        let allCount = viewModel.visibleNodePositions.count
-
-        #expect(allCount == viewModel.nodePositions.count)
-    }
-
     // MARK: - Omitted IDs Pre-computed
 
     @Test @MainActor

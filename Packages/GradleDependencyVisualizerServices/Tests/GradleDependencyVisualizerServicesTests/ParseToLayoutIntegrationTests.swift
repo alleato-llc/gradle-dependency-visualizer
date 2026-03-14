@@ -382,7 +382,7 @@ struct ParseToLayoutIntegrationTests {
     // MARK: - Layout: Checkstyle
 
     @Test
-    func layoutProducesPositionForEveryCheckstyleNode() {
+    func layoutProducesPositionForEveryVisibleNode() {
         let tree = parser.parse(
             output: Self.checkstyleConfiguration,
             projectName: "spring-boot-testing-reference",
@@ -390,7 +390,15 @@ struct ParseToLayoutIntegrationTests {
         )
         let positions = TreeLayoutCalculator.layout(tree: tree)
 
-        #expect(positions.count == tree.totalNodeCount)
+        // Omitted/constraint leaf nodes are excluded from layout to reduce canvas width
+        #expect(positions.count <= tree.totalNodeCount)
+        #expect(positions.count > 0)
+
+        // Every position should map to a real node
+        let allNodeIds = collectAllNodeIds(from: tree)
+        for pos in positions {
+            #expect(allNodeIds.contains(pos.nodeId))
+        }
     }
 
     @Test
@@ -486,7 +494,18 @@ struct ParseToLayoutIntegrationTests {
         )
         let positions = TreeLayoutCalculator.layout(tree: tree)
 
-        #expect(positions.count == tree.totalNodeCount)
+        // Omitted/constraint leaf nodes are excluded from layout
+        #expect(positions.count <= tree.totalNodeCount)
         #expect(positions.count > 40)
+    }
+
+    private func collectAllNodeIds(from tree: DependencyTree) -> Set<String> {
+        var ids = Set<String>()
+        func visit(_ node: DependencyNode) {
+            ids.insert(node.id)
+            for child in node.children { visit(child) }
+        }
+        tree.roots.forEach { visit($0) }
+        return ids
     }
 }

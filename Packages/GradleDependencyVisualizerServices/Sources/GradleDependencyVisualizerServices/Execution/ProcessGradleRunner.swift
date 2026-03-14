@@ -25,6 +25,40 @@ public struct ProcessGradleRunner: GradleRunner {
         projectPath: String,
         configuration: GradleConfiguration
     ) async throws -> String {
+        try await runGradle(
+            projectPath: projectPath,
+            arguments: [
+                "dependencies",
+                "--configuration", configuration.rawValue,
+                "--console=plain",
+            ]
+        )
+    }
+
+    public func listProjects(projectPath: String) async throws -> [GradleModule] {
+        let output = try await runGradle(
+            projectPath: projectPath,
+            arguments: ["projects", "--console=plain"]
+        )
+        return GradleProjectListParser.parse(output: output)
+    }
+
+    public func runDependencies(
+        projectPath: String,
+        module: GradleModule,
+        configuration: GradleConfiguration
+    ) async throws -> String {
+        try await runGradle(
+            projectPath: projectPath,
+            arguments: [
+                "\(module.path):dependencies",
+                "--configuration", configuration.rawValue,
+                "--console=plain",
+            ]
+        )
+    }
+
+    private func runGradle(projectPath: String, arguments: [String]) async throws -> String {
         let gradlewPath = (projectPath as NSString).appendingPathComponent("gradlew")
 
         guard FileManager.default.isExecutableFile(atPath: gradlewPath) else {
@@ -34,11 +68,7 @@ public struct ProcessGradleRunner: GradleRunner {
         return try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: gradlewPath)
-            process.arguments = [
-                "dependencies",
-                "--configuration", configuration.rawValue,
-                "--console=plain",
-            ]
+            process.arguments = arguments
             process.currentDirectoryURL = URL(fileURLWithPath: projectPath)
 
             let pipe = Pipe()

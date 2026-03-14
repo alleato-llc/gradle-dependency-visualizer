@@ -57,6 +57,13 @@ public enum TreeLayoutCalculator {
         fixedNodeHeight
     }
 
+    /// Returns true for leaf nodes that are omitted duplicates or BOM constraints.
+    /// These don't add unique information to the graph — the real dependency is
+    /// shown elsewhere in the tree.
+    private static func shouldExcludeFromLayout(_ node: DependencyNode) -> Bool {
+        node.children.isEmpty && (node.isOmitted || node.isConstraint)
+    }
+
     @discardableResult
     private static func layoutNode(
         _ node: DependencyNode,
@@ -66,9 +73,25 @@ public enum TreeLayoutCalculator {
         positionIndex: inout [String: NodePosition]
     ) -> Double {
         let y = Double(depth) * verticalSpacing
-        let myWidth = nodeWidth(for: node.subtreeSize)
+        let myWidth = fixedNodeWidth
 
         if node.children.isEmpty {
+            let position = NodePosition(
+                nodeId: node.id,
+                x: xStart,
+                y: y,
+                subtreeSize: node.subtreeSize
+            )
+            positions.append(position)
+            positionIndex[node.id] = position
+            return myWidth
+        }
+
+        // Only layout children that contribute unique information
+        let visibleChildren = node.children.filter { !shouldExcludeFromLayout($0) }
+
+        if visibleChildren.isEmpty {
+            // All children are omitted/constraint — treat this node as a leaf
             let position = NodePosition(
                 nodeId: node.id,
                 x: xStart,
@@ -83,15 +106,15 @@ public enum TreeLayoutCalculator {
         var childXOffset = xStart
         var childCenterXs: [Double] = []
 
-        for (index, child) in node.children.enumerated() {
+        for (index, child) in visibleChildren.enumerated() {
             let childWidth = layoutNode(child, depth: depth + 1, xStart: childXOffset, positions: &positions, positionIndex: &positionIndex)
 
             if let lastChildPos = positionIndex[child.id] {
-                let childNodeWidth = nodeWidth(for: lastChildPos.subtreeSize)
+                let childNodeWidth = fixedNodeWidth
                 childCenterXs.append(lastChildPos.x + childNodeWidth / 2)
             }
 
-            childXOffset += childWidth + (index < node.children.count - 1 ? siblingGap : 0)
+            childXOffset += childWidth + (index < visibleChildren.count - 1 ? siblingGap : 0)
         }
 
         let totalChildrenWidth = childXOffset - xStart

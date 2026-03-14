@@ -2,13 +2,6 @@ import SwiftUI
 import GradleDependencyVisualizerCore
 import GradleDependencyVisualizerServices
 
-private struct ContentOffsetKey: PreferenceKey {
-    nonisolated(unsafe) static var defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
-        value = nextValue()
-    }
-}
-
 /// Finds the enclosing NSScrollView from any NSView in the hierarchy.
 private struct ScrollViewFinder: NSViewRepresentable {
     var onFound: (NSScrollView) -> Void
@@ -41,8 +34,6 @@ struct DependencyGraphView: View {
     @Bindable var viewModel: DependencyGraphViewModel
     var onCompare: (() -> Void)?
     @State private var baseScale: CGFloat = 1.0
-    @State private var viewportSize: CGSize = .zero
-    @State private var contentOffset: CGPoint = .zero
     @State private var depthSliderValue: Double = 0
     @State private var searchDebounceTask: Task<Void, Never>?
     @State private var nsScrollView: NSScrollView?
@@ -53,35 +44,11 @@ struct DependencyGraphView: View {
             ScrollView([.horizontal, .vertical]) {
                 graphContent(scaled: true)
                     .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: ContentOffsetKey.self,
-                                value: geo.frame(in: .named("scroll")).origin
-                            )
-                        }
-                    )
-                    .background(
                         ScrollViewFinder { scrollView in
                             nsScrollView = scrollView
                         }
                     )
             }
-            .coordinateSpace(name: "scroll")
-            .onPreferenceChange(ContentOffsetKey.self) { offset in
-                contentOffset = offset
-                updateViewport()
-            }
-            .background(
-                GeometryReader { geo in
-                    Color.clear.onAppear {
-                        viewportSize = geo.size
-                    }
-                    .onChange(of: geo.size) { _, newSize in
-                        viewportSize = newSize
-                        updateViewport()
-                    }
-                }
-            )
             .gesture(
                 MagnifyGesture()
                     .onChanged { value in
@@ -139,17 +106,6 @@ struct DependencyGraphView: View {
             scrollView.contentView.animator().setBoundsOrigin(newOrigin)
         }
         scrollView.reflectScrolledClipView(scrollView.contentView)
-    }
-
-    private func updateViewport() {
-        guard viewportSize.width > 0, viewportSize.height > 0 else {
-            viewModel.viewportRect = nil
-            return
-        }
-        let scale = viewModel.zoomScale
-        let origin = CGPoint(x: -contentOffset.x / scale, y: -contentOffset.y / scale)
-        let size = CGSize(width: viewportSize.width / scale, height: viewportSize.height / scale)
-        viewModel.viewportRect = CGRect(origin: origin, size: size)
     }
 
     private var toolbar: some View {

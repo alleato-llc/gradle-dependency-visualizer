@@ -104,6 +104,55 @@ public enum TestDependencyTreeFactory {
         GradleModule(name: name, path: path ?? ":\(name)")
     }
 
+    public static func makeMultiModuleTree(
+        projectName: String = "test-project",
+        configuration: GradleConfiguration = .compileClasspath,
+        sharedDependency: (group: String, artifact: String, version: String) = ("com.google.guava", "guava", "31.1-jre"),
+        versionMismatch: Bool = false
+    ) -> DependencyTree {
+        let sharedA = DependencyNode(
+            group: sharedDependency.group,
+            artifact: sharedDependency.artifact,
+            requestedVersion: sharedDependency.version
+        )
+        let uniqueA = DependencyNode(
+            group: "com.example",
+            artifact: "lib-a-only",
+            requestedVersion: "1.0.0"
+        )
+        let moduleA = DependencyNode(
+            group: projectName,
+            artifact: "app",
+            requestedVersion: "module",
+            children: [sharedA, uniqueA]
+        )
+
+        let sharedBVersion = versionMismatch ? "30.0-jre" : sharedDependency.version
+        let sharedB = DependencyNode(
+            group: sharedDependency.group,
+            artifact: sharedDependency.artifact,
+            requestedVersion: sharedBVersion
+        )
+        let uniqueB = DependencyNode(
+            group: "com.example",
+            artifact: "lib-b-only",
+            requestedVersion: "2.0.0"
+        )
+        let moduleB = DependencyNode(
+            group: projectName,
+            artifact: "core",
+            requestedVersion: "module",
+            children: [sharedB, uniqueB]
+        )
+
+        return DependencyTree(
+            projectName: projectName,
+            configuration: configuration,
+            roots: [moduleA, moduleB],
+            conflicts: []
+        )
+    }
+
     public static func makeNode(
         group: String = "com.example",
         artifact: String = "lib",

@@ -13,8 +13,10 @@ struct ContentView: View {
     @State private var diffViewModel: DependencyDiffViewModel?
     @State private var tableViewModel: DependencyTableViewModel?
     @State private var scopeValidationViewModel: ScopeValidationViewModel?
+    @State private var duplicateDetectionViewModel: DuplicateDetectionViewModel?
     @State private var showConflicts = false
     @State private var showScopeValidation = false
+    @State private var showDuplicates = false
     @State private var detailMode: DetailViewMode = .graph
 
     init(container: DependencyContainer) {
@@ -51,6 +53,11 @@ struct ContentView: View {
                                 ScopeValidationView(viewModel: scopeValidationViewModel)
                                     .frame(minHeight: 100, idealHeight: 200)
                             }
+
+                            if showDuplicates, let duplicateDetectionViewModel {
+                                DuplicateDetectionView(viewModel: duplicateDetectionViewModel)
+                                    .frame(minHeight: 100, idealHeight: 200)
+                            }
                         }
                     case .table:
                         if let tableViewModel {
@@ -80,6 +87,24 @@ struct ContentView: View {
                             }
                         }
                     }
+                    if detailMode == .graph {
+                        ToolbarItem {
+                            Button(showDuplicates ? "Hide Duplicates" : "Detect Duplicates") {
+                                if !showDuplicates {
+                                    if duplicateDetectionViewModel == nil, let tree = projectSelectionViewModel.dependencyTree {
+                                        duplicateDetectionViewModel = DuplicateDetectionViewModel(
+                                            tree: tree,
+                                            fileExporter: container.fileExporter,
+                                            projectPath: projectSelectionViewModel.projectPath,
+                                            modules: projectSelectionViewModel.discoveredModules
+                                        )
+                                    }
+                                    duplicateDetectionViewModel?.detect()
+                                }
+                                showDuplicates.toggle()
+                            }
+                        }
+                    }
                 }
             } else {
                 ContentUnavailableView(
@@ -106,8 +131,10 @@ struct ContentView: View {
                 conflictViewModel = ConflictTableViewModel(tree: tree, fileExporter: container.fileExporter)
                 tableViewModel = DependencyTableViewModel(tree: tree, fileExporter: container.fileExporter)
                 scopeValidationViewModel = ScopeValidationViewModel(tree: tree, fileExporter: container.fileExporter)
+                duplicateDetectionViewModel = nil
                 showConflicts = false
                 showScopeValidation = false
+                showDuplicates = false
                 diffViewModel = nil
                 // Default to table view for very large trees
                 detailMode = tree.totalNodeCount > 5000 ? .table : .graph
@@ -116,6 +143,7 @@ struct ContentView: View {
                 conflictViewModel = nil
                 tableViewModel = nil
                 scopeValidationViewModel = nil
+                duplicateDetectionViewModel = nil
                 diffViewModel = nil
             }
         }

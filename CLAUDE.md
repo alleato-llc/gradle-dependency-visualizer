@@ -53,10 +53,18 @@ xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test
 Detailed documentation in `docs/`:
 
 - [Architecture](docs/ARCHITECTURE.md) — System design, component responsibilities, domain models
+- [Data Models](docs/DATA_MODELS.md) — All domain models, properties, conformances, ID patterns
+- [UI Architecture](docs/UI.md) — Screen layout, component areas, ViewModel conventions, state management
 - [Testing](docs/TESTING.md) — Testing strategy, infrastructure, conventions
 - [Dependency Visualization](docs/feature/DEPENDENCY_VISUALIZATION.md) — Graph rendering feature
 - [Conflict Detection](docs/feature/CONFLICT_DETECTION.md) — Conflict detection feature
 - [Dependency Table](docs/feature/DEPENDENCY_TABLE.md) — Table view feature (flat + tree modes)
+- [Multi-Module Support](docs/feature/MULTI_MODULE_SUPPORT.md) — Multi-module project discovery and loading
+- [Dependency Diff](docs/feature/DEPENDENCY_DIFF.md) — Baseline comparison and change detection
+- [Scope Validation](docs/feature/SCOPE_VALIDATION.md) — Test library scope checking
+- [Duplicate Detection](docs/feature/DUPLICATE_DETECTION.md) — Cross-module and within-module duplicate dependency detection
+- [Import / Export](docs/feature/IMPORT_EXPORT.md) — File import and multi-format export
+- [Project Selection](docs/feature/PROJECT_SELECTION.md) — Project setup, configuration, and loading
 
 ## Key Design Decisions
 

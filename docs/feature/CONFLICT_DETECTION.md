@@ -15,6 +15,7 @@ Detects and reports Gradle dependency version conflicts — where a transitive d
    - Requested version
    - Resolved version (in red)
    - Requested by (parent dependency)
+   - Risk level (color-coded: red=CRITICAL, orange=HIGH, yellow=MEDIUM, green=LOW, gray=INFO)
 4. Table columns are sortable by clicking headers
 
 ### Data flow
@@ -41,26 +42,32 @@ ContentView.onChange(of: dependencyTree)
 
 ### Core models
 
-- `DependencyConflict` — `coordinate`, `requestedVersion`, `resolvedVersion`, `requestedBy`
+- `DependencyConflict` — `coordinate`, `requestedVersion`, `resolvedVersion`, `requestedBy`, optional `riskLevel` and `riskReason`
+- `RiskLevel` — `.info`, `.low`, `.medium`, `.high`, `.critical`
 - `DependencyNode.hasConflict` — computed: `resolvedVersion != nil && resolvedVersion != requestedVersion`
 - `DependencyNode.displayVersion` — shows `"requested -> resolved"` when conflict exists
 
 ### Core types
 
-- `ConflictTableViewModel` — owns conflict list, sort field, sort direction
-- `ConflictTableView` — macOS `Table` with 4 columns
-- `ConflictReportGenerator` — text and JSON report generation (used by CLI)
+- `ConflictTableViewModel` — owns conflict list, sort field (including `.riskLevel`), sort direction
+- `ConflictTableView` — macOS `Table` with 5 columns (including Risk with color coding)
+- `ConflictRiskCalculator` — computes risk levels via semver distance + `dependencyInsight` BOM detection
+- `ConflictReportGenerator` — text and JSON report generation (includes risk data when present)
 - `DependencyAnalysisCalculator.conflictsByCoordinate()` — groups conflicts for analysis
 
 ### File organization
 
 ```
+Packages/GradleDependencyVisualizerCore/
+  Sources/.../Models/RiskLevel.swift
+  Sources/.../Models/DependencyConflict.swift
+Packages/GradleDependencyVisualizerServices/
+  Sources/.../Analysis/ConflictRiskCalculator.swift
+  Sources/.../Analysis/DependencyAnalysisCalculator.swift
+  Sources/.../Export/ConflictReportGenerator.swift
 GradleDependencyVisualizer/
   ViewModels/ConflictTableViewModel.swift
   Views/Conflict/ConflictTableView.swift
-Packages/GradleDependencyVisualizerServices/
-  Sources/.../Export/ConflictReportGenerator.swift
-  Sources/.../Analysis/DependencyAnalysisCalculator.swift
 ```
 
 ## CLI Support
@@ -71,7 +78,13 @@ Packages/GradleDependencyVisualizerServices/
 
 # JSON report
 ./gradle-dependency-visualizer conflicts /path/to/project --format json
+
+# With risk assessment (runs dependencyInsight per conflict)
+./gradle-dependency-visualizer conflicts /path/to/project --risk
+./gradle-dependency-visualizer conflicts /path/to/project --risk --format json
 ```
+
+See [Risk Assessment](RISK_ASSESSMENT.md) for details on risk levels and BOM detection.
 
 ## Testing
 
@@ -79,6 +92,7 @@ Packages/GradleDependencyVisualizerServices/
 - `ConflictTableViewModelTests` — conflict loading, sort field toggling, ascending/descending
 - `DependencyAnalysisCalculatorTests` — conflict grouping by coordinate
 - `TextGradleDependencyParserTests` — conflict marker parsing, parent tracking
+- `ConflictRiskCalculatorTests` — risk levels, BOM detection, downgrades, combined adjustments
 
 ## Limitations
 

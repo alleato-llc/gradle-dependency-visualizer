@@ -17,6 +17,7 @@ final class ConflictTableViewModel {
         case requestedVersion
         case resolvedVersion
         case requestedBy
+        case riskLevel
     }
 
     var sortField: SortField = .coordinate
@@ -34,6 +35,10 @@ final class ConflictTableViewModel {
                 result = a.resolvedVersion < b.resolvedVersion
             case .requestedBy:
                 result = a.requestedBy < b.requestedBy
+            case .riskLevel:
+                let aLevel = a.riskLevel ?? .info
+                let bLevel = b.riskLevel ?? .info
+                result = aLevel < bLevel
             }
             return sortAscending ? result : !result
         }
@@ -55,13 +60,20 @@ final class ConflictTableViewModel {
     }
 
     func exportConflictsAsJSON() {
-        let entries = sortedConflicts.map { conflict in
-            [
+        let entries = sortedConflicts.map { conflict -> [String: String] in
+            var entry: [String: String] = [
                 "coordinate": conflict.coordinate,
                 "requestedVersion": conflict.requestedVersion,
                 "resolvedVersion": conflict.resolvedVersion,
                 "requestedBy": conflict.requestedBy,
             ]
+            if let riskLevel = conflict.riskLevel {
+                entry["riskLevel"] = riskLevel.rawValue
+            }
+            if let riskReason = conflict.riskReason {
+                entry["riskReason"] = riskReason
+            }
+            return entry
         }
 
         guard let data = try? JSONSerialization.data(withJSONObject: entries, options: [.prettyPrinted, .sortedKeys]) else {

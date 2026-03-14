@@ -153,6 +153,50 @@ public enum TestDependencyTreeFactory {
         )
     }
 
+    public static func makeTreeWithBOMConstraints(
+        projectName: String = "test-project",
+        configuration: GradleConfiguration = .compileClasspath,
+        conflictCoordinate: String = "org.slf4j:slf4j-api",
+        requestedVersion: String = "1.7.36",
+        resolvedVersion: String = "2.0.17"
+    ) -> DependencyTree {
+        let parts = conflictCoordinate.split(separator: ":")
+        let group = String(parts[0])
+        let artifact = String(parts[1])
+
+        let constraintNode = DependencyNode(
+            group: group,
+            artifact: artifact,
+            requestedVersion: resolvedVersion,
+            resolvedVersion: resolvedVersion,
+            isConstraint: true
+        )
+        let conflictNode = DependencyNode(
+            group: group,
+            artifact: artifact,
+            requestedVersion: requestedVersion,
+            resolvedVersion: resolvedVersion
+        )
+        let root = DependencyNode(
+            group: "com.example",
+            artifact: "my-app",
+            requestedVersion: "1.0.0",
+            children: [constraintNode, conflictNode]
+        )
+        let conflict = DependencyConflict(
+            coordinate: conflictCoordinate,
+            requestedVersion: requestedVersion,
+            resolvedVersion: resolvedVersion,
+            requestedBy: "com.example:my-app"
+        )
+        return DependencyTree(
+            projectName: projectName,
+            configuration: configuration,
+            roots: [root],
+            conflicts: [conflict]
+        )
+    }
+
     public static func makeNode(
         group: String = "com.example",
         artifact: String = "lib",

@@ -58,6 +58,22 @@ public struct ProcessGradleRunner: GradleRunner {
         )
     }
 
+    public func runDependencyInsight(
+        projectPath: String,
+        dependency: String,
+        configuration: GradleConfiguration
+    ) async throws -> String {
+        try await runGradle(
+            projectPath: projectPath,
+            arguments: [
+                "dependencyInsight",
+                "--dependency", dependency,
+                "--configuration", configuration.rawValue,
+                "-q",
+            ]
+        )
+    }
+
     private func runGradle(projectPath: String, arguments: [String]) async throws -> String {
         let gradlewPath = (projectPath as NSString).appendingPathComponent("gradlew")
 

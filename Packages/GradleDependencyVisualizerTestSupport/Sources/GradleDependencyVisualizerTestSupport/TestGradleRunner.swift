@@ -14,6 +14,10 @@ public final class TestGradleRunner: GradleRunner, @unchecked Sendable {
     public var moduleRunCallCount = 0
     public var lastModule: GradleModule?
 
+    public var insightOutputs: [String: String] = [:]
+    public var insightCallCount = 0
+    public var lastInsightDependency: String?
+
     public init() {}
 
     public func runDependencies(
@@ -57,5 +61,21 @@ public final class TestGradleRunner: GradleRunner, @unchecked Sendable {
         }
 
         return moduleOutputMap[module.path] ?? outputToReturn
+    }
+
+    public func runDependencyInsight(
+        projectPath: String,
+        dependency: String,
+        configuration: GradleConfiguration
+    ) async throws -> String {
+        insightCallCount += 1
+        lastInsightDependency = dependency
+        lastProjectPath = projectPath
+
+        if let error = errorToThrow {
+            throw error
+        }
+
+        return insightOutputs[dependency] ?? ""
     }
 }

@@ -1,6 +1,16 @@
 import SwiftUI
 import GradleDependencyVisualizerCore
 
+private func riskColor(for level: RiskLevel) -> Color {
+    switch level {
+    case .critical: .red
+    case .high: .orange
+    case .medium: .yellow
+    case .low: .green
+    case .info: .gray
+    }
+}
+
 struct ConflictTableView: View {
     @Bindable var viewModel: ConflictTableViewModel
 
@@ -45,6 +55,19 @@ struct ConflictTableView: View {
                         .font(.caption)
                 }
                 .width(min: 200)
+
+                TableColumn("Risk") { conflict in
+                    if let riskLevel = conflict.riskLevel {
+                        Text(riskLevel.rawValue)
+                            .font(.caption.bold())
+                            .foregroundStyle(riskColor(for: riskLevel))
+                    } else {
+                        Text("-")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .width(min: 70)
             }
         }
     }

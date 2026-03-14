@@ -13,6 +13,12 @@ public protocol GradleRunner: Sendable {
         module: GradleModule,
         configuration: GradleConfiguration
     ) async throws -> String
+
+    func runDependencyInsight(
+        projectPath: String,
+        dependency: String,
+        configuration: GradleConfiguration
+    ) async throws -> String
 }
 
 extension GradleRunner {
@@ -26,5 +32,13 @@ extension GradleRunner {
         configuration: GradleConfiguration
     ) async throws -> String {
         try await runDependencies(projectPath: projectPath, configuration: configuration)
+    }
+
+    public func runDependencyInsight(
+        projectPath: String,
+        dependency: String,
+        configuration: GradleConfiguration
+    ) async throws -> String {
+        ""
     }
 }

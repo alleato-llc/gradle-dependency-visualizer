@@ -28,7 +28,14 @@ public enum ConflictReportGenerator {
         for (coordinate, conflicts) in grouped.sorted(by: { $0.key < $1.key }) {
             lines.append("  \(coordinate)")
             for conflict in conflicts {
-                lines.append("    \(conflict.requestedVersion) -> \(conflict.resolvedVersion) (requested by \(conflict.requestedBy))")
+                var line = "    \(conflict.requestedVersion) -> \(conflict.resolvedVersion) (requested by \(conflict.requestedBy))"
+                if let riskLevel = conflict.riskLevel {
+                    line += " [\(riskLevel.rawValue)]"
+                }
+                lines.append(line)
+                if let riskReason = conflict.riskReason {
+                    lines.append("    risk: \(riskReason)")
+                }
             }
             lines.append("")
         }
@@ -38,13 +45,20 @@ public enum ConflictReportGenerator {
     }
 
     private static func jsonReport(tree: DependencyTree) -> String {
-        let conflicts = tree.conflicts.map { conflict in
-            [
+        let conflicts = tree.conflicts.map { conflict -> [String: Any] in
+            var entry: [String: Any] = [
                 "coordinate": conflict.coordinate,
                 "requestedVersion": conflict.requestedVersion,
                 "resolvedVersion": conflict.resolvedVersion,
                 "requestedBy": conflict.requestedBy,
             ]
+            if let riskLevel = conflict.riskLevel {
+                entry["riskLevel"] = riskLevel.rawValue
+            }
+            if let riskReason = conflict.riskReason {
+                entry["riskReason"] = riskReason
+            }
+            return entry
         }
 
         let report: [String: Any] = [

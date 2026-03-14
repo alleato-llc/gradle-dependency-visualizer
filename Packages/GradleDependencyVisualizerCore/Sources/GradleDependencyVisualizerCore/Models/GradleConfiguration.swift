@@ -53,4 +53,13 @@ public enum GradleConfiguration: String, Sendable, CaseIterable, Codable {
             "Dependencies exposed to consumers of your library. Only applicable to projects using the java-library plugin."
         }
     }
+
+    public var isProduction: Bool {
+        switch self {
+        case .compileClasspath, .runtimeClasspath, .implementation, .runtimeOnly, .compileOnly, .api:
+            return true
+        default:
+            return false
+        }
+    }
 }

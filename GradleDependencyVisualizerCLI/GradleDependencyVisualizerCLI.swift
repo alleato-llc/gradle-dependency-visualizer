@@ -215,7 +215,16 @@ struct Conflicts: AsyncParsableCommand {
 
     func run() async throws {
         if try await TreeLoader.handleListModules(options: options) { return }
-        let tree = try await TreeLoader.loadTree(options: options)
+        let runner = ProcessGradleRunner()
+        var tree = try await TreeLoader.loadTree(options: options, runner: runner)
+        tree = DependencyTree(
+            projectName: tree.projectName,
+            configuration: tree.configuration,
+            roots: tree.roots,
+            conflicts: await ConflictRiskCalculator.assessConflicts(
+                tree: tree, runner: runner, projectPath: options.projectPath
+            )
+        )
         print(ConflictReportGenerator.report(tree: tree, format: format.reportFormat))
     }
 }

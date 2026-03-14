@@ -49,7 +49,7 @@ Business logic organized by concern:
 |-----------|-------|----------------|
 | `Parsing/` | `GradleDependencyParser` (protocol), `TextGradleDependencyParser` | Parse Gradle ASCII tree output |
 | `Execution/` | `GradleRunner` (protocol), `ProcessGradleRunner` | Execute `./gradlew` via Foundation.Process |
-| `Layout/` | `TreeLayoutCalculator`, `NodePosition` | Reingold-Tilford tree layout algorithm |
+| `Layout/` | `TreeLayoutCalculator`, `NodePosition`, `DepthLimitCalculator`, `ViewportCullingCalculator` | Reingold-Tilford tree layout, auto-collapse depth recommendation, viewport culling |
 | `Export/` | `DotExportGenerator`, `ConflictReportGenerator` | DOT format and conflict report generation |
 | `Analysis/` | `DependencyAnalysisCalculator`, `DependencyTableCalculator` | Node collection, subtree sizes, conflict grouping, flat table entries |
 
@@ -116,10 +116,14 @@ Gradle has no native JSON output for the `dependencies` task. The parser handles
 
 ### Large Graph Performance
 
+- **Auto-collapse** — trees with >500 nodes auto-set `maxVisibleDepth` via `DepthLimitCalculator`, which finds the deepest level keeping cumulative node count under 500. A dismissible notice explains this to the user.
+- **Viewport culling** — `ViewportCullingCalculator` determines which nodes intersect the visible scroll region (+ 300pt margin). Bounds are tracked via `NSView.boundsDidChangeNotification` on the scroll view's clip view — reliable and synchronous, unlike the previous GeometryReader/PreferenceKey approach. Culling is skipped when bounds are zero (initial load, PNG export).
+- **Table view default** — trees with >5000 total nodes default to table view, which uses `SwiftUI.List` with native lazy rendering.
+- **Node count warning** — orange banner warns when >2000 nodes are visible, suggesting depth reduction or table view.
+- **PNG export safety** — estimates memory (`width * height * 4 * scale^2`), caps scale to stay under 256MB, or suggests JSON export for very large canvases.
 - **O(1) position lookups** — `positionMap` dictionary replaces linear `first(where:)` scans
 - **Pre-computed omitted IDs** — `omittedIds: Set<String>` built once in init
 - **O(n) layout** — `TreeLayoutCalculator` uses `positionIndex` dictionary instead of `positions.last(where:)` per child
-- **Viewport culling** — only nodes within the visible scroll region (+ 200pt padding) are rendered
 - **Collapse/expand subtrees** — double-click to collapse; BFS via `childrenMap` computes hidden descendants
 - **Depth limiter** — toolbar slider restricts maximum visible tree depth
 

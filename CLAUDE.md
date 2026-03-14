@@ -68,7 +68,8 @@ Detailed documentation in `docs/`:
 - Node sizes proportional to `log2(subtreeSize)`
 - 11 color themes (Pastel, Ocean, Earth, Monochrome, High Contrast, Warm Gradient, Cool Gradient, Sunset, Forest, Neon, Nordic) assigned by group name hash; red for conflict nodes
 - O(1) position lookups via `positionMap` dictionary; O(n) layout via `positionIndex` in `TreeLayoutCalculator`
-- Viewport culling renders only visible nodes; collapse/expand subtrees via double-click; depth limiter slider
+- Auto-collapse via `DepthLimitCalculator` for trees >500 nodes; viewport culling via `ViewportCullingCalculator` using `NSView.boundsDidChangeNotification` on the scroll view clip view (300pt margin); table view default for >5000 nodes; PNG export memory cap at 256MB
+- Collapse/expand subtrees via double-click; depth limiter slider
 
 ## Skills
 

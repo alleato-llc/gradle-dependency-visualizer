@@ -43,10 +43,14 @@ ProjectSelectionView
 
 ### Performance optimizations
 
+- **Auto-collapse for large trees** — `DepthLimitCalculator` computes the deepest level where cumulative node count stays under 500. Trees with >500 nodes auto-set `maxVisibleDepth` on init, with a dismissible info banner explaining the collapse.
+- **Viewport culling** — `ViewportCullingCalculator` filters nodes to those intersecting the visible scroll region + 300pt margin. Scroll bounds are tracked via `NSView.boundsDidChangeNotification` on the NSScrollView's clip view (captured by `ScrollViewFinder`). Culling is bypassed when bounds are zero (initial load, PNG export).
+- **Table view default for very large trees** — trees with >5000 total nodes auto-switch to table view in `ContentView`.
+- **Node count warning** — orange toolbar banner when >2000 visible nodes, suggesting depth reduction or table view.
+- **PNG export safety** — memory estimated as `width * height * 4 * scale^2`; scale capped to stay under 256MB. Too-large canvases log an error suggesting JSON export instead.
 - **O(1) position lookups** — `positionMap` dictionary replaces linear `first(where:)` scans in ViewModel
 - **O(n) layout** — `TreeLayoutCalculator` passes a `positionIndex` dictionary alongside the positions array
 - **Pre-computed omitted IDs** — `omittedIds: Set<String>` built once during init
-- **Viewport culling** — `GeometryReader` + `PreferenceKey` track scroll position; only nodes within visible rect + 200pt padding are rendered
 - **Collapse/expand** — double-click to collapse subtrees; BFS via `childrenMap` computes hidden descendants
 - **Depth limiter** — toolbar slider restricts maximum visible depth
 
@@ -74,13 +78,18 @@ GradleDependencyVisualizer/
     GraphNodeView.swift
     GraphEdgeView.swift
 Packages/GradleDependencyVisualizerServices/
-  Sources/.../Layout/TreeLayoutCalculator.swift
+  Sources/.../Layout/
+    TreeLayoutCalculator.swift
+    DepthLimitCalculator.swift
+    ViewportCullingCalculator.swift
 ```
 
 ## Testing
 
 - `TreeLayoutCalculatorTests` — verifies single node, child depth positioning, deep tree handling
-- `DependencyGraphViewModelTests` — position computation, color consistency, node sizing, search filtering
+- `DepthLimitCalculatorTests` — large tree depth recommendation, under-threshold passthrough, empty input, threshold scaling
+- `ViewportCullingCalculatorTests` — inclusion/exclusion, partial overlap, margin expansion, empty input, scale effects
+- `DependencyGraphViewModelTests` — position computation, color consistency, node sizing, search filtering, auto-collapse for large trees, node count warning, viewport culling skip/filter behavior
 
 ## Table View Alternative
 
@@ -88,5 +97,6 @@ A table view is available as an alternative to the graph (see [Dependency Table]
 
 ## Limitations
 
-- Viewport culling helps with large trees but layout computation itself is still eager
+- Layout computation (`TreeLayoutCalculator`) is still eager — all nodes are positioned upfront even when auto-collapsed. At very large scales (200K+ nodes), this causes a noticeable init delay.
+- `DependencyNode.subtreeSize` is a recursive computed property, making it O(n) per call. It is called per-node during layout, giving O(n^2) worst case for deep trees.
 - Zoom uses `MagnifyGesture` (trackpad) plus toolbar +/- buttons

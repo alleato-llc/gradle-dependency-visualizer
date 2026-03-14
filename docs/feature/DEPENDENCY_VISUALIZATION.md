@@ -82,6 +82,10 @@ Packages/GradleDependencyVisualizerServices/
 - `TreeLayoutCalculatorTests` — verifies single node, child depth positioning, deep tree handling
 - `DependencyGraphViewModelTests` — position computation, color consistency, node sizing, search filtering
 
+## Table View Alternative
+
+A table view is available as an alternative to the graph (see [Dependency Table](DEPENDENCY_TABLE.md)). Users switch between Graph and Table via a segmented picker in the toolbar.
+
 ## Limitations
 
 - Viewport culling helps with large trees but layout computation itself is still eager

@@ -37,6 +37,7 @@ Pure domain models with no dependencies.
 | `DependencyConflict` | `struct` | Records a version conflict (requested vs resolved) |
 | `DependencyTree` | `struct` | Root container with nodes, conflicts, metadata |
 | `GradleConfiguration` | `enum` | Gradle configurations (compileClasspath, runtimeClasspath, etc.) |
+| `FlatDependencyEntry` | `struct` | Flattened dependency for table view (coordinate, version, usedBy, occurrences) |
 
 `DependencyNode` is a reference type because the dependency tree is recursive. It is immutable and `Sendable`.
 
@@ -50,7 +51,7 @@ Business logic organized by concern:
 | `Execution/` | `GradleRunner` (protocol), `ProcessGradleRunner` | Execute `./gradlew` via Foundation.Process |
 | `Layout/` | `TreeLayoutCalculator`, `NodePosition` | Reingold-Tilford tree layout algorithm |
 | `Export/` | `DotExportCalculator`, `ConflictReportCalculator` | DOT format and conflict report generation |
-| `Analysis/` | `DependencyAnalysisCalculator` | Node collection, subtree sizes, conflict grouping |
+| `Analysis/` | `DependencyAnalysisCalculator`, `DependencyTableCalculator` | Node collection, subtree sizes, conflict grouping, flat table entries |
 
 ### GradleDependencyVisualizerTestSupport
 

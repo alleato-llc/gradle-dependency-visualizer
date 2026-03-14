@@ -61,7 +61,7 @@ Fakes use `@unchecked Sendable` when they have mutable state conforming to `Send
 
 ## Test Suites
 
-### Package Tests (24 tests)
+### Package Tests (31 tests)
 
 | Suite | Tests | What it covers |
 |-------|-------|----------------|
@@ -70,14 +70,16 @@ Fakes use `@unchecked Sendable` when they have mutable state conforming to `Send
 | `DotExportCalculatorTests` | 3 | DOT structure, labels, conflict highlighting |
 | `ConflictReportCalculatorTests` | 4 | Text/JSON reports, empty/populated conflicts |
 | `DependencyAnalysisCalculatorTests` | 4 | Node collection, coordinates, subtree sizes, grouping |
+| `DependencyTableCalculatorTests` | 7 | Flat entries, conflicts, usedBy, parent map, version aggregation, sorting |
 
-### App Tests (25 tests)
+### App Tests (32 tests)
 
 | Suite | Tests | What it covers |
 |-------|-------|----------------|
 | `ProjectSelectionViewModelTests` | 3 | Initial state, invalid path error, validation |
 | `DependencyGraphViewModelTests` | 17 | Position map, O(1) lookups, color consistency, node sizing, search, collapse/expand, depth limiting, viewport culling, pre-computed omitted IDs |
 | `ConflictTableViewModelTests` | 5 | Conflict loading, sorting, toggle behavior |
+| `DependencyTableViewModelTests` | 7 | Flat entries init, table mode, sort toggling, search filtering, conflict filtering, JSON export |
 
 ## Conventions
 

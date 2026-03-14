@@ -31,7 +31,7 @@ xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test
 
 ## Module Structure
 
-- **GradleDependencyVisualizerCore** — Domain models (`DependencyNode`, `DependencyTree`, `DependencyConflict`, `GradleConfiguration`)
+- **GradleDependencyVisualizerCore** — Domain models (`DependencyNode`, `DependencyTree`, `DependencyConflict`, `GradleConfiguration`, `FlatDependencyEntry`)
 - **GradleDependencyVisualizerServices** — Business logic (parsing, execution, layout, export, analysis)
 - **GradleDependencyVisualizerTestSupport** — Test doubles and factories
 - **GradleDependencyVisualizer** — macOS SwiftUI app (Views, ViewModels, DI container)
@@ -56,6 +56,7 @@ Detailed documentation in `docs/`:
 - [Testing](docs/TESTING.md) — Testing strategy, infrastructure, conventions
 - [Dependency Visualization](docs/feature/DEPENDENCY_VISUALIZATION.md) — Graph rendering feature
 - [Conflict Detection](docs/feature/CONFLICT_DETECTION.md) — Conflict detection feature
+- [Dependency Table](docs/feature/DEPENDENCY_TABLE.md) — Table view feature (flat + tree modes)
 
 ## Key Design Decisions
 

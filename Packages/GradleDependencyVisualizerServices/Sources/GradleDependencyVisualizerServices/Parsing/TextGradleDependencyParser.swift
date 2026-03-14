@@ -23,7 +23,7 @@ public struct TextGradleDependencyParser: GradleDependencyParser {
             )
 
             if parsed.resolvedVersion != nil && parsed.resolvedVersion != parsed.requestedVersion {
-                let parentCoordinate = stack.last?.node.coordinate ?? projectName
+                let parentCoordinate = stack.last(where: { $0.depth == parsed.depth - 1 })?.node.coordinate ?? projectName
                 conflicts.append(DependencyConflict(
                     coordinate: "\(parsed.group):\(parsed.artifact)",
                     requestedVersion: parsed.requestedVersion,

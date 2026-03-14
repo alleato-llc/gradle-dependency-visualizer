@@ -12,7 +12,9 @@ struct ContentView: View {
     @State private var conflictViewModel: ConflictTableViewModel?
     @State private var diffViewModel: DependencyDiffViewModel?
     @State private var tableViewModel: DependencyTableViewModel?
+    @State private var scopeValidationViewModel: ScopeValidationViewModel?
     @State private var showConflicts = false
+    @State private var showScopeValidation = false
     @State private var detailMode: DetailViewMode = .graph
 
     init(container: DependencyContainer) {
@@ -44,6 +46,11 @@ struct ContentView: View {
                                 ConflictTableView(viewModel: conflictViewModel)
                                     .frame(minHeight: 100, idealHeight: 200)
                             }
+
+                            if showScopeValidation, let scopeValidationViewModel {
+                                ScopeValidationView(viewModel: scopeValidationViewModel)
+                                    .frame(minHeight: 100, idealHeight: 200)
+                            }
                         }
                     case .table:
                         if let tableViewModel {
@@ -66,12 +73,19 @@ struct ContentView: View {
                             }
                         }
                     }
+                    if let scopeValidationViewModel, !scopeValidationViewModel.results.isEmpty, detailMode == .graph {
+                        ToolbarItem {
+                            Button(showScopeValidation ? "Hide Validation" : "Validate Scopes") {
+                                showScopeValidation.toggle()
+                            }
+                        }
+                    }
                 }
             } else {
                 ContentUnavailableView(
                     "No Project Selected",
                     systemImage: "folder.badge.questionmark",
-                    description: Text("Select or drop a Gradle project folder or build.gradle file to visualize its dependencies.")
+                    description: Text("Select or drop a Gradle project folder or build.gradle(.kts) file to visualize its dependencies.")
                 )
                 .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
                     guard let provider = providers.first else { return false }
@@ -91,12 +105,15 @@ struct ContentView: View {
                 graphViewModel = DependencyGraphViewModel(tree: tree, fileExporter: container.fileExporter)
                 conflictViewModel = ConflictTableViewModel(tree: tree, fileExporter: container.fileExporter)
                 tableViewModel = DependencyTableViewModel(tree: tree, fileExporter: container.fileExporter)
+                scopeValidationViewModel = ScopeValidationViewModel(tree: tree, fileExporter: container.fileExporter)
                 showConflicts = false
+                showScopeValidation = false
                 diffViewModel = nil
             } else {
                 graphViewModel = nil
                 conflictViewModel = nil
                 tableViewModel = nil
+                scopeValidationViewModel = nil
                 diffViewModel = nil
             }
         }

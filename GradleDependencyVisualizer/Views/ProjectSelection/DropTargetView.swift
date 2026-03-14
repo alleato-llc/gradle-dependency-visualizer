@@ -20,7 +20,7 @@ struct DropTargetView: View {
                     Image(systemName: "folder.badge.plus")
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
-                    Text("Drop Gradle project or build.gradle here")
+                    Text("Drop Gradle project or build.gradle(.kts) here")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

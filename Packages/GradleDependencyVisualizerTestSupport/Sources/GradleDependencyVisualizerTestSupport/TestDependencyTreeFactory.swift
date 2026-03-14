@@ -75,6 +75,28 @@ public enum TestDependencyTreeFactory {
         )
     }
 
+    public static func makeTreeWithTestLibraries(
+        projectName: String = "test-project",
+        configuration: GradleConfiguration = .compileClasspath
+    ) -> DependencyTree {
+        let junit = DependencyNode(group: "junit", artifact: "junit", requestedVersion: "4.13.2")
+        let mockito = DependencyNode(group: "org.mockito", artifact: "mockito-core", requestedVersion: "5.3.1")
+        let jupiterApi = DependencyNode(group: "org.junit.jupiter", artifact: "junit-jupiter-api", requestedVersion: "5.9.3")
+        let guava = DependencyNode(group: "com.google.guava", artifact: "guava", requestedVersion: "31.1-jre")
+        let root = DependencyNode(
+            group: "com.example",
+            artifact: "my-app",
+            requestedVersion: "1.0.0",
+            children: [junit, mockito, jupiterApi, guava]
+        )
+        return DependencyTree(
+            projectName: projectName,
+            configuration: configuration,
+            roots: [root],
+            conflicts: []
+        )
+    }
+
     public static func makeNode(
         group: String = "com.example",
         artifact: String = "lib",

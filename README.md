@@ -78,9 +78,9 @@ open GradleDependencyVisualizer.xcodeproj
 xcodebuild -scheme GradleDependencyVisualizerCLI -destination 'platform=macOS' build
 
 # Run tests
-cd Packages/GradleDependencyVisualizerServices && swift test   # Package tests (140 tests)
+cd Packages/GradleDependencyVisualizerServices && swift test   # Package tests (151 tests)
 cd ../..
-xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test   # App tests (51 tests)
+xcodebuild -scheme GradleDependencyVisualizer -destination 'platform=macOS' test   # App tests (54 tests)
 ```
 
 ## How It Works
@@ -142,3 +142,8 @@ See `docs/` for detailed documentation:
 - [Dependency Visualization](docs/feature/DEPENDENCY_VISUALIZATION.md) — Graph rendering feature
 - [Conflict Detection](docs/feature/CONFLICT_DETECTION.md) — Conflict detection feature
 - [Dependency Table](docs/feature/DEPENDENCY_TABLE.md) — Table view feature (flat + tree modes)
+- [Multi-Module Support](docs/feature/MULTI_MODULE_SUPPORT.md) — Multi-module project discovery and loading
+- [Dependency Diff](docs/feature/DEPENDENCY_DIFF.md) — Baseline comparison and change detection
+- [Scope Validation](docs/feature/SCOPE_VALIDATION.md) — Test library scope checking
+- [Import / Export](docs/feature/IMPORT_EXPORT.md) — File import and multi-format export
+- [Project Selection](docs/feature/PROJECT_SELECTION.md) — Project setup, configuration, and loading

@@ -34,6 +34,8 @@ final class DependencyGraphViewModel {
     var hideOmittedNodes: Bool = false
     var theme: GraphTheme = .pastel
     var maxVisibleDepth: Int? = nil
+    var scrollViewBounds: CGRect = .zero
+    var performanceNotice: String?
 
     var collapsedNodeIds: Set<String> = [] {
         didSet { recomputeHiddenByCollapse() }
@@ -170,6 +172,17 @@ final class DependencyGraphViewModel {
         let maxY = positions.map(\.y).max() ?? 0
         self.canvasSize = CGSize(width: maxX + 300, height: maxY + 200)
 
+        // Auto-collapse large trees to a manageable depth
+        if positions.count > 500 {
+            let recommended = DepthLimitCalculator.recommendedDepth(
+                nodeDepths: depths,
+                targetNodeCount: 500
+            )
+            self.maxVisibleDepth = recommended
+            self.performanceNotice = "Large tree (\(positions.count) nodes). Showing depth \(recommended) of \(self.maxTreeDepth). Use the depth slider or expand individual nodes to see more."
+            logger.info("Auto-collapsed large tree to depth \(recommended)")
+        }
+
         logger.info("Graph layout computed: \(positions.count) nodes")
     }
 
@@ -228,17 +241,37 @@ final class DependencyGraphViewModel {
     }
 
     var visibleNodePositions: [NodePosition] {
-        nodePositions.filter { pos in
+        let filtered = nodePositions.filter { pos in
             if hideOmittedNodes && omittedIds.contains(pos.nodeId) { return false }
             if hiddenByCollapse.contains(pos.nodeId) { return false }
             if let maxDepth = maxVisibleDepth, let depth = nodeDepths[pos.nodeId], depth > maxDepth { return false }
             return true
         }
+
+        // Apply viewport culling when scroll bounds are available (skip for PNG export / initial load)
+        guard scrollViewBounds != .zero else { return filtered }
+
+        let culledIds = ViewportCullingCalculator.visibleNodeIds(
+            positions: filtered,
+            nodeSize: { subtreeSize in nodeSize(for: subtreeSize) },
+            visibleRect: scrollViewBounds,
+            scale: zoomScale,
+            margin: 300
+        )
+        return filtered.filter { culledIds.contains($0.nodeId) }
     }
 
     var visibleEdges: [Edge] {
         let visibleIds = Set(visibleNodePositions.map(\.nodeId))
         return edges.filter { visibleIds.contains($0.parentId) && visibleIds.contains($0.childId) }
+    }
+
+    var nodeCountWarning: String? {
+        let count = visibleNodePositions.count
+        if count > 2000 {
+            return "Rendering \(count) nodes. Consider reducing depth or switching to Table view."
+        }
+        return nil
     }
 
     func nodeSize(for subtreeSize: Int) -> CGSize {
@@ -292,8 +325,28 @@ final class DependencyGraphViewModel {
     }
 
     func exportGraphAsPNG(view: some View) {
+        // Estimate memory usage and cap scale to prevent OOM
+        var scale: CGFloat = 2.0
+        let maxMemoryBytes: CGFloat = 256 * 1024 * 1024 // 256MB
+
+        let estimatedMemory = canvasSize.width * canvasSize.height * 4 * scale * scale
+        if estimatedMemory > maxMemoryBytes {
+            // Reduce scale to fit under memory limit
+            let maxScale = sqrt(maxMemoryBytes / (canvasSize.width * canvasSize.height * 4))
+            scale = max(0.5, floor(maxScale * 2) / 2) // Round down to nearest 0.5
+            let w = Int(self.canvasSize.width)
+            let h = Int(self.canvasSize.height)
+            logger.warning("PNG export scale reduced to \(scale)x to prevent memory issues (canvas: \(w)x\(h))")
+        }
+
+        let canvasTooLarge = canvasSize.width * canvasSize.height * 4 * scale * scale > maxMemoryBytes
+        if canvasTooLarge {
+            logger.error("Canvas too large for PNG export. Export as JSON instead, or reduce depth before exporting.")
+            return
+        }
+
         let renderer = ImageRenderer(content: view)
-        renderer.scale = 2.0
+        renderer.scale = scale
 
         guard let cgImage = renderer.cgImage else { return }
 

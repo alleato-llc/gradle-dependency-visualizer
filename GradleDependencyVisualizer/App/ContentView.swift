@@ -109,6 +109,8 @@ struct ContentView: View {
                 showConflicts = false
                 showScopeValidation = false
                 diffViewModel = nil
+                // Default to table view for very large trees
+                detailMode = tree.totalNodeCount > 5000 ? .table : .graph
             } else {
                 graphViewModel = nil
                 conflictViewModel = nil

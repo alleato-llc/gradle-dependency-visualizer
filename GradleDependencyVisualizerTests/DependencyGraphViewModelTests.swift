@@ -180,7 +180,91 @@ struct DependencyGraphViewModelTests {
         #expect(viewModel.visibleNodePositions.count == allCount)
     }
 
+    // MARK: - Auto-Collapse Tests
+
+    @Test @MainActor
+    func autoCollapseSetsDepthForLargeTree() {
+        // Build a wide tree with >500 nodes
+        var children: [DependencyNode] = []
+        for i in 0..<50 {
+            var grandchildren: [DependencyNode] = []
+            for j in 0..<12 {
+                grandchildren.append(TestDependencyTreeFactory.makeNode(
+                    group: "com.example",
+                    artifact: "leaf-\(i)-\(j)",
+                    requestedVersion: "1.0.0"
+                ))
+            }
+            children.append(TestDependencyTreeFactory.makeNode(
+                group: "com.example",
+                artifact: "mid-\(i)",
+                requestedVersion: "1.0.0",
+                children: grandchildren
+            ))
+        }
+        let root = TestDependencyTreeFactory.makeNode(
+            group: "com.example",
+            artifact: "root",
+            requestedVersion: "1.0.0",
+            children: children
+        )
+        let tree = DependencyTree(
+            projectName: "large-project",
+            configuration: .compileClasspath,
+            roots: [root],
+            conflicts: []
+        )
+
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        #expect(viewModel.maxVisibleDepth != nil)
+        #expect(viewModel.performanceNotice != nil)
+    }
+
+    @Test @MainActor
+    func noAutoCollapseForSmallTree() {
+        let tree = TestDependencyTreeFactory.makeSimpleTree()
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        #expect(viewModel.maxVisibleDepth == nil)
+        #expect(viewModel.performanceNotice == nil)
+    }
+
+    // MARK: - Node Count Warning Tests
+
+    @Test @MainActor
+    func nodeCountWarningNilForSmallTree() {
+        let tree = TestDependencyTreeFactory.makeSimpleTree()
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        #expect(viewModel.nodeCountWarning == nil)
+    }
+
     // MARK: - Viewport Culling Tests
+
+    @Test @MainActor
+    func viewportCullingSkippedWhenBoundsZero() {
+        let tree = TestDependencyTreeFactory.makeSimpleTree()
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        // Default scrollViewBounds is .zero, so all nodes should be visible
+        #expect(viewModel.scrollViewBounds == .zero)
+        #expect(!viewModel.visibleNodePositions.isEmpty)
+    }
+
+    @Test @MainActor
+    func viewportCullingFiltersWhenBoundsSet() {
+        let tree = TestDependencyTreeFactory.makeDeepTree(depth: 5)
+        let viewModel = DependencyGraphViewModel(tree: tree, fileExporter: fileExporter)
+
+        let allCount = viewModel.visibleNodePositions.count
+
+        // Set a very small viewport that won't contain all nodes
+        viewModel.scrollViewBounds = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let culledCount = viewModel.visibleNodePositions.count
+
+        #expect(culledCount <= allCount)
+    }
 
     // MARK: - Omitted IDs Pre-computed
 

@@ -37,15 +37,48 @@ struct DependencyGraphView: View {
     @State private var depthSliderValue: Double = 0
     @State private var searchDebounceTask: Task<Void, Never>?
     @State private var nsScrollView: NSScrollView?
+    @State private var boundsObserver: NSObjectProtocol?
+    @State private var showPerformanceNotice: Bool = true
 
     var body: some View {
         VStack(spacing: 0) {
             toolbar
+
+            if let notice = viewModel.performanceNotice, showPerformanceNotice {
+                HStack {
+                    Image(systemName: "info.circle")
+                    Text(notice)
+                    Spacer()
+                    Button("Dismiss") {
+                        showPerformanceNotice = false
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                .background(.bar)
+            }
+
+            if let warning = viewModel.nodeCountWarning {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle")
+                    Text(warning)
+                    Spacer()
+                }
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                .background(.bar)
+            }
+
             ScrollView([.horizontal, .vertical]) {
                 graphContent(scaled: true)
                     .background(
                         ScrollViewFinder { scrollView in
-                            nsScrollView = scrollView
+                            setupScrollViewObserver(scrollView)
                         }
                     )
             }
@@ -60,7 +93,12 @@ struct DependencyGraphView: View {
             )
         }
         .onAppear {
-            depthSliderValue = Double(viewModel.maxTreeDepth)
+            depthSliderValue = Double(viewModel.maxVisibleDepth ?? viewModel.maxTreeDepth)
+        }
+        .onDisappear {
+            if let observer = boundsObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
         }
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.focusedMatchIndex = 0
@@ -222,6 +260,30 @@ struct DependencyGraphView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+    }
+
+    private func setupScrollViewObserver(_ scrollView: NSScrollView) {
+        guard nsScrollView !== scrollView else { return }
+        nsScrollView = scrollView
+
+        // Remove existing observer if any
+        if let observer = boundsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+
+        let clipView = scrollView.contentView
+        clipView.postsBoundsChangedNotifications = true
+
+        boundsObserver = NotificationCenter.default.addObserver(
+            forName: NSView.boundsDidChangeNotification,
+            object: clipView,
+            queue: .main
+        ) { _ in
+            viewModel.scrollViewBounds = clipView.bounds
+        }
+
+        // Set initial bounds
+        viewModel.scrollViewBounds = clipView.bounds
     }
 
     @ViewBuilder

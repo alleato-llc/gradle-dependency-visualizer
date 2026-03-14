@@ -99,11 +99,18 @@ enum TreeLoader {
 
         var moduleTrees: [(module: GradleModule, tree: DependencyTree)] = []
         for mod in modules {
-            let output = try await runner.runDependencies(
-                projectPath: options.projectPath, module: mod, configuration: config
-            )
-            let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
-            moduleTrees.append((module: mod, tree: moduleTree))
+            do {
+                let output = try await runner.runDependencies(
+                    projectPath: options.projectPath, module: mod, configuration: config
+                )
+                let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
+                moduleTrees.append((module: mod, tree: moduleTree))
+            } catch {
+                FileHandle.standardError.write(Data("Warning: skipping module \(mod.path): \(error.localizedDescription)\n".utf8))
+            }
+        }
+        guard !moduleTrees.isEmpty else {
+            throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'")
         }
         return MultiModuleTreeCalculator.assemble(
             projectName: projectName,
@@ -153,11 +160,18 @@ enum TreeLoader {
 
             var moduleTrees: [(module: GradleModule, tree: DependencyTree)] = []
             for mod in modules {
-                let output = try await runner.runDependencies(
-                    projectPath: path, module: mod, configuration: config
-                )
-                let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
-                moduleTrees.append((module: mod, tree: moduleTree))
+                do {
+                    let output = try await runner.runDependencies(
+                        projectPath: path, module: mod, configuration: config
+                    )
+                    let moduleTree = parser.parse(output: output, projectName: mod.name, configuration: config)
+                    moduleTrees.append((module: mod, tree: moduleTree))
+                } catch {
+                    FileHandle.standardError.write(Data("Warning: skipping module \(mod.path): \(error.localizedDescription)\n".utf8))
+                }
+            }
+            guard !moduleTrees.isEmpty else {
+                throw ValidationError("No modules could be loaded for configuration '\(config.rawValue)'")
             }
             return MultiModuleTreeCalculator.assemble(
                 projectName: projectName,

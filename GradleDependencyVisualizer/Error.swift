@@ -6,6 +6,7 @@ enum GradleDependencyVisualizerError: Error, LocalizedError {
     case gradlewNotFound
     case parsingFailed(String)
     case executionFailed(String)
+    case noModulesLoaded
 
     var errorDescription: String? {
         switch self {
@@ -17,6 +18,8 @@ enum GradleDependencyVisualizerError: Error, LocalizedError {
             "Failed to parse Gradle output: \(message)"
         case .executionFailed(let message):
             "Gradle execution failed: \(message)"
+        case .noModulesLoaded:
+            "No modules could be loaded for the selected configuration. Some modules may not support this configuration."
         }
     }
 }

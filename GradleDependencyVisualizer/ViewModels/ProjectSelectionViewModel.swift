@@ -208,61 +208,40 @@ final class ProjectSelectionViewModel {
 
         Task {
             defer { isLoading = false }
-            do {
-                let moduleTrees = try await loadModulesConcurrently(modules)
-                let projectName = (projectPath as NSString).lastPathComponent
-                dependencyTree = MultiModuleTreeCalculator.assemble(
-                    projectName: projectName,
-                    configuration: selectedConfiguration,
-                    moduleTrees: moduleTrees
-                )
-                logger.info("Loaded \(self.dependencyTree?.totalNodeCount ?? 0) dependencies across \(moduleTrees.count) modules")
-            } catch {
-                logger.error("Failed to load multi-module dependencies: \(error.localizedDescription)")
-                errorPresenter.present(error)
+            let moduleTrees = await loadModulesConcurrently(modules)
+            if moduleTrees.isEmpty {
+                errorPresenter.present(GradleDependencyVisualizerError.noModulesLoaded)
+                return
             }
+            let projectName = (projectPath as NSString).lastPathComponent
+            dependencyTree = MultiModuleTreeCalculator.assemble(
+                projectName: projectName,
+                configuration: selectedConfiguration,
+                moduleTrees: moduleTrees
+            )
+            logger.info("Loaded \(self.dependencyTree?.totalNodeCount ?? 0) dependencies across \(moduleTrees.count) modules")
         }
     }
 
     private func loadModulesConcurrently(
         _ modules: [GradleModule]
-    ) async throws -> [(module: GradleModule, tree: DependencyTree)] {
+    ) async -> [(module: GradleModule, tree: DependencyTree)] {
         let maxConcurrency = 8
         let projectName = (projectPath as NSString).lastPathComponent
 
-        return try await withThrowingTaskGroup(
-            of: (GradleModule, DependencyTree).self,
+        return await withTaskGroup(
+            of: (GradleModule, DependencyTree?).self,
             returning: [(module: GradleModule, tree: DependencyTree)].self
         ) { group in
             var results: [(module: GradleModule, tree: DependencyTree)] = []
             var index = 0
 
             for module in modules.prefix(maxConcurrency) {
-                group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser] in
-                    let output = try await gradleRunner.runDependencies(
-                        projectPath: projectPath,
-                        module: module,
-                        configuration: selectedConfiguration
-                    )
-                    let tree = dependencyParser.parse(
-                        output: output,
-                        projectName: projectName,
-                        configuration: selectedConfiguration
-                    )
-                    return (module, tree)
-                }
-                index += 1
-            }
-
-            for try await result in group {
-                results.append((module: result.0, tree: result.1))
-
-                if index < modules.count {
-                    let nextModule = modules[index]
-                    group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser] in
+                group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser, logger] in
+                    do {
                         let output = try await gradleRunner.runDependencies(
                             projectPath: projectPath,
-                            module: nextModule,
+                            module: module,
                             configuration: selectedConfiguration
                         )
                         let tree = dependencyParser.parse(
@@ -270,7 +249,39 @@ final class ProjectSelectionViewModel {
                             projectName: projectName,
                             configuration: selectedConfiguration
                         )
-                        return (nextModule, tree)
+                        return (module, tree)
+                    } catch {
+                        logger.warning("Skipping module \(module.path): \(error.localizedDescription)")
+                        return (module, nil)
+                    }
+                }
+                index += 1
+            }
+
+            for await result in group {
+                if let tree = result.1 {
+                    results.append((module: result.0, tree: tree))
+                }
+
+                if index < modules.count {
+                    let nextModule = modules[index]
+                    group.addTask { [projectPath, selectedConfiguration, gradleRunner, dependencyParser, logger] in
+                        do {
+                            let output = try await gradleRunner.runDependencies(
+                                projectPath: projectPath,
+                                module: nextModule,
+                                configuration: selectedConfiguration
+                            )
+                            let tree = dependencyParser.parse(
+                                output: output,
+                                projectName: projectName,
+                                configuration: selectedConfiguration
+                            )
+                            return (nextModule, tree)
+                        } catch {
+                            logger.warning("Skipping module \(nextModule.path): \(error.localizedDescription)")
+                            return (nextModule, nil)
+                        }
                     }
                     index += 1
                 }

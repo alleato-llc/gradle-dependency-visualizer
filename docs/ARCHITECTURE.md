@@ -50,7 +50,7 @@ Business logic organized by concern:
 | `Parsing/` | `GradleDependencyParser` (protocol), `TextGradleDependencyParser` | Parse Gradle ASCII tree output |
 | `Execution/` | `GradleRunner` (protocol), `ProcessGradleRunner` | Execute `./gradlew` via Foundation.Process |
 | `Layout/` | `TreeLayoutCalculator`, `NodePosition` | Reingold-Tilford tree layout algorithm |
-| `Export/` | `DotExportCalculator`, `ConflictReportCalculator` | DOT format and conflict report generation |
+| `Export/` | `DotExportGenerator`, `ConflictReportGenerator` | DOT format and conflict report generation |
 | `Analysis/` | `DependencyAnalysisCalculator`, `DependencyTableCalculator` | Node collection, subtree sizes, conflict grouping, flat table entries |
 
 ### GradleDependencyVisualizerTestSupport

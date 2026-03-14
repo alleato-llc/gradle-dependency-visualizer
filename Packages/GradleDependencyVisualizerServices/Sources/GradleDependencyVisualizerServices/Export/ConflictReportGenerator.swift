@@ -6,7 +6,7 @@ public enum ConflictReportFormat: String, Sendable {
     case json
 }
 
-public enum ConflictReportCalculator {
+public enum ConflictReportGenerator {
     public static func report(tree: DependencyTree, format: ConflictReportFormat) -> String {
         switch format {
         case .text:

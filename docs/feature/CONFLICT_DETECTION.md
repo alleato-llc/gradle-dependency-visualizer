@@ -49,7 +49,7 @@ ContentView.onChange(of: dependencyTree)
 
 - `ConflictTableViewModel` — owns conflict list, sort field, sort direction
 - `ConflictTableView` — macOS `Table` with 4 columns
-- `ConflictReportCalculator` — text and JSON report generation (used by CLI)
+- `ConflictReportGenerator` — text and JSON report generation (used by CLI)
 - `DependencyAnalysisCalculator.conflictsByCoordinate()` — groups conflicts for analysis
 
 ### File organization
@@ -59,7 +59,7 @@ GradleDependencyVisualizer/
   ViewModels/ConflictTableViewModel.swift
   Views/Conflict/ConflictTableView.swift
 Packages/GradleDependencyVisualizerServices/
-  Sources/.../Export/ConflictReportCalculator.swift
+  Sources/.../Export/ConflictReportGenerator.swift
   Sources/.../Analysis/DependencyAnalysisCalculator.swift
 ```
 
@@ -75,7 +75,7 @@ Packages/GradleDependencyVisualizerServices/
 
 ## Testing
 
-- `ConflictReportCalculatorTests` — text/JSON output, empty/populated conflicts
+- `ConflictReportGeneratorTests` — text/JSON output, empty/populated conflicts
 - `ConflictTableViewModelTests` — conflict loading, sort field toggling, ascending/descending
 - `DependencyAnalysisCalculatorTests` — conflict grouping by coordinate
 - `TextGradleDependencyParserTests` — conflict marker parsing, parent tracking

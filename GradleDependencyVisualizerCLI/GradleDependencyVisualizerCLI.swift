@@ -34,7 +34,7 @@ struct Graph: AsyncParsableCommand {
         let output = try await runner.runDependencies(projectPath: projectPath, configuration: config)
         let projectName = (projectPath as NSString).lastPathComponent
         let tree = parser.parse(output: output, projectName: projectName, configuration: config)
-        let dot = DotExportCalculator.export(tree: tree)
+        let dot = DotExportGenerator.export(tree: tree)
         print(dot)
     }
 }
@@ -68,7 +68,7 @@ struct Conflicts: AsyncParsableCommand {
         let output = try await runner.runDependencies(projectPath: projectPath, configuration: config)
         let projectName = (projectPath as NSString).lastPathComponent
         let tree = parser.parse(output: output, projectName: projectName, configuration: config)
-        let report = ConflictReportCalculator.report(tree: tree, format: reportFormat)
+        let report = ConflictReportGenerator.report(tree: tree, format: reportFormat)
         print(report)
     }
 }

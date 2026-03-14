@@ -67,8 +67,8 @@ Fakes use `@unchecked Sendable` when they have mutable state conforming to `Send
 |-------|-------|----------------|
 | `TextGradleDependencyParserTests` | 10 | Simple deps, nesting, conflicts, markers, edge cases |
 | `TreeLayoutCalculatorTests` | 3 | Single node, children positioning, deep trees |
-| `DotExportCalculatorTests` | 3 | DOT structure, labels, conflict highlighting |
-| `ConflictReportCalculatorTests` | 4 | Text/JSON reports, empty/populated conflicts |
+| `DotExportGeneratorTests` | 3 | DOT structure, labels, conflict highlighting |
+| `ConflictReportGeneratorTests` | 4 | Text/JSON reports, empty/populated conflicts |
 | `DependencyAnalysisCalculatorTests` | 4 | Node collection, coordinates, subtree sizes, grouping |
 | `DependencyTableCalculatorTests` | 7 | Flat entries, conflicts, usedBy, parent map, version aggregation, sorting |
 

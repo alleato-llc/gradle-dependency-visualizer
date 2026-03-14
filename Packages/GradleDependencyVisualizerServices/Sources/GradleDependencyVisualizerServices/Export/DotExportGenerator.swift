@@ -1,6 +1,6 @@
 import GradleDependencyVisualizerCore
 
-public enum DotExportCalculator {
+public enum DotExportGenerator {
     public static func export(tree: DependencyTree) -> String {
         var lines: [String] = []
         lines.append("digraph dependencies {")
